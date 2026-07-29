@@ -1,9 +1,12 @@
 const Opportunity = require('../models/Opportunity');
 const asyncHandler = require('../utils/asyncHandler');
+const { fail, requireObjectId, validateOpportunity } = require('../utils/validation');
+const { DOMAINS } = require('../config/constants');
 
 // POST /api/opportunities  (admin) — create
 const createOpportunity = asyncHandler(async (req, res) => {
-  const opportunity = await Opportunity.create(req.body);
+  const payload = validateOpportunity(res, req.body);
+  const opportunity = await Opportunity.create(payload);
   res.status(201).json({
     success: true,
     data: opportunity,
@@ -39,6 +42,7 @@ const getOpportunities = asyncHandler(async (req, res) => {
 
 // GET /api/opportunities/:id  — single
 const getOpportunityById = asyncHandler(async (req, res) => {
+  requireObjectId(res, req.params.id, 'Opportunity ID');
   const opportunity = await Opportunity.findById(req.params.id);
   if (!opportunity) {
     res.status(404);
@@ -53,7 +57,9 @@ const getOpportunityById = asyncHandler(async (req, res) => {
 
 // PUT /api/opportunities/:id  (admin) — update
 const updateOpportunity = asyncHandler(async (req, res) => {
-  const opportunity = await Opportunity.findByIdAndUpdate(req.params.id, req.body, {
+  requireObjectId(res, req.params.id, 'Opportunity ID');
+  const payload = validateOpportunity(res, req.body);
+  const opportunity = await Opportunity.findByIdAndUpdate(req.params.id, payload, {
     new: true,
     runValidators: true,
   });
@@ -70,6 +76,7 @@ const updateOpportunity = asyncHandler(async (req, res) => {
 
 // DELETE /api/opportunities/:id  (admin) — delete
 const deleteOpportunity = asyncHandler(async (req, res) => {
+  requireObjectId(res, req.params.id, 'Opportunity ID');
   const opportunity = await Opportunity.findByIdAndDelete(req.params.id);
   if (!opportunity) {
     res.status(404);
@@ -89,3 +96,4 @@ module.exports = {
   updateOpportunity,
   deleteOpportunity,
 };
+

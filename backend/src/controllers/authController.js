@@ -1,18 +1,14 @@
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const generateToken = require('../utils/generateToken');
+const { validateLogin, validateRegister } = require('../utils/validation');
 
 // Shape a user object for the client (never leak the password).
 const publicUser = (u) => ({ _id: u._id, name: u.name, email: u.email, role: u.role });
 
 // POST /api/auth/register — create a normal user account and log them in.
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
-
-  if (!name || !email || !password) {
-    res.status(400);
-    throw new Error('Name, email, and password are required');
-  }
+  const { name, email, password } = validateRegister(res, req.body);
 
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) {
@@ -30,12 +26,7 @@ const register = asyncHandler(async (req, res) => {
 
 // POST /api/auth/login — verify credentials, return a token.
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400);
-    throw new Error('Email and password are required');
-  }
+  const { email, password } = validateLogin(res, req.body);
 
   // password has select:false, so ask for it explicitly.
   const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
@@ -61,3 +52,4 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 module.exports = { register, login, getMe };
+

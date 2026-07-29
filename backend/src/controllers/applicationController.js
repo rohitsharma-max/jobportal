@@ -2,6 +2,7 @@ const Application = require('../models/Application');
 const Opportunity = require('../models/Opportunity');
 const asyncHandler = require('../utils/asyncHandler');
 const sendEmail = require('../utils/sendEmail');
+const { validateApplication } = require('../utils/validation');
 
 const VALID_STATUSES = ['Pending', 'Approved', 'Rejected'];
 
@@ -42,25 +43,20 @@ const getStatusEmail = (application, status) => {
 // POST /api/applications  (logged-in user) - submit an application.
 // Accepts multipart/form-data: text fields + an optional "resume" file.
 const createApplication = asyncHandler(async (req, res) => {
-  const opportunity = await Opportunity.findById(req.body.opportunityId);
+  // Validate & sanitize all input fields (name, email, phone, coverNote, resumeLink, opportunityId).
+  const payload = validateApplication(res, req.body, req.file);
+
+  const opportunity = await Opportunity.findById(payload.opportunityId);
   if (!opportunity) {
     res.status(404);
     throw new Error('Opportunity not found');
   }
 
-  // Resume: prefer an uploaded file (Cloudinary URL in req.file.path),
-  // otherwise fall back to a pasted link.
-  const resumeLink = req.file ? req.file.path : req.body.resumeLink || '';
-
   const application = await Application.create({
-    opportunityId: req.body.opportunityId,
+    ...payload,
     userId: req.user._id,
-    name: req.body.name,
-    email: req.body.email,
-    phone: req.body.phone,
-    coverNote: req.body.coverNote,
-    resumeLink,
   });
+
 
   // Fire a confirmation email (non-blocking: never fail the request on email error).
   try {
