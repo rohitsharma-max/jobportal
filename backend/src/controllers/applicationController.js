@@ -11,6 +11,34 @@ const populateApplication = (query) =>
     .populate('userId', 'name email')
     .populate('reviewedBy', 'name email');
 
+
+const getStatusEmail = (application, status) => {
+  const opportunity = application.opportunityId;
+  const title = opportunity?.title || 'your application';
+  const company = opportunity?.company || 'the company';
+
+  if (status === 'Approved') {
+    return {
+      subject: `Application approved - ${title}`,
+      html: `<p>Hi ${application.name},</p>
+             <p>Congratulations! Your application for <strong>${title}</strong> at ${company} has been approved.</p>
+             <p>The hiring team will contact you for the next steps.</p>
+             <p>Good luck!<br/>- Job Portal</p>`,
+    };
+  }
+
+  if (status === 'Rejected') {
+    return {
+      subject: `Application update - ${title}`,
+      html: `<p>Hi ${application.name},</p>
+             <p>Thank you for applying for <strong>${title}</strong> at ${company}.</p>
+             <p>After review, your application was not selected for this opportunity.</p>
+             <p>Please keep exploring more roles on Job Portal.<br/>- Job Portal</p>`,
+    };
+  }
+
+  return null;
+};
 // POST /api/applications  (logged-in user) - submit an application.
 // Accepts multipart/form-data: text fields + an optional "resume" file.
 const createApplication = asyncHandler(async (req, res) => {
@@ -102,21 +130,33 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
     throw new Error('Status must be Pending, Approved, or Rejected');
   }
 
-  const application = await populateApplication(
-    Application.findByIdAndUpdate(
-      req.params.id,
-      {
-        status,
-        reviewedAt: status === 'Pending' ? null : new Date(),
-        reviewedBy: status === 'Pending' ? null : req.user._id,
-      },
-      { new: true, runValidators: true }
-    )
-  );
-
-  if (!application) {
+  const existingApplication = await Application.findById(req.params.id);
+  if (!existingApplication) {
     res.status(404);
     throw new Error('Application not found');
+  }
+
+  const previousStatus = existingApplication.status || 'Pending';
+  existingApplication.status = status;
+  existingApplication.reviewedAt = status === 'Pending' ? null : new Date();
+  existingApplication.reviewedBy = status === 'Pending' ? null : req.user._id;
+  await existingApplication.save();
+
+  const application = await populateApplication(Application.findById(existingApplication._id));
+
+  if (previousStatus !== status) {
+    const email = getStatusEmail(application, status);
+    if (email) {
+      try {
+        await sendEmail({
+          to: application.email,
+          subject: email.subject,
+          html: email.html,
+        });
+      } catch (err) {
+        console.error('Status email send failed:', err.message);
+      }
+    }
   }
 
   res.status(200).json({
