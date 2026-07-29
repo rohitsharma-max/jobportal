@@ -21,7 +21,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'job-portal/resumes',
-    resource_type: 'raw', // resumes are PDFs/docs, not images
+    resource_type: 'auto',
     // Keep a readable, unique-ish public id.
     public_id: (req, file) =>
       `resume-${Date.now()}-${file.originalname.replace(/\.[^.]+$/, '')}`,

@@ -14,13 +14,14 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="container navbar-inner">
         <NavLink to="/" className="navbar-brand">
-          💼 JobPortal
+          JobPortal
         </NavLink>
         <div className="navbar-links">
           <NavLink to="/" end>
             Opportunities
           </NavLink>
 
+          {user && user.role !== 'admin' && <NavLink to="/dashboard">My Applications</NavLink>}
           {user?.role === 'admin' && <NavLink to="/admin">Admin</NavLink>}
 
           {user ? (

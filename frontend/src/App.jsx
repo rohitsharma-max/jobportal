@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import OpportunityDetailsPage from './pages/OpportunityDetailsPage';
 import ApplyPage from './pages/ApplyPage';
 import ConfirmationPage from './pages/ConfirmationPage';
+import CustomerDashboard from './pages/CustomerDashboard';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -26,6 +27,14 @@ export default function App() {
         <Route path="/confirmation" element={<ConfirmationPage />} />
 
         {/* Logged-in users only */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/opportunities/:id/apply"
           element={

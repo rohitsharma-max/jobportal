@@ -3,74 +3,185 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import Loader from '../../components/Loader';
 
+const statuses = ['All', 'Pending', 'Approved', 'Rejected'];
+const statusClass = {
+  Pending: 'badge-warning',
+  Approved: 'badge-success',
+  Rejected: 'badge-danger',
+};
+
 export default function ViewApplications() {
   const [applications, setApplications] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [domains, setDomains] = useState([]);
+  const [filters, setFilters] = useState({ status: 'All', domain: '', company: '' });
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    api
-      .get('/applications')
-      .then((res) => setApplications(res.data.data))
+  const load = () => {
+    setLoading(true);
+    setError('');
+
+    const params = {};
+    if (filters.status !== 'All') params.status = filters.status;
+    if (filters.domain) params.domain = filters.domain;
+    if (filters.company.trim()) params.company = filters.company.trim();
+
+    Promise.all([
+      api.get('/applications', { params }),
+      api.get('/applications/stats'),
+      api.get('/domains'),
+    ])
+      .then(([applicationRes, statsRes, domainRes]) => {
+        setApplications(applicationRes.data.data);
+        setStats(statsRes.data.data);
+        setDomains(domainRes.data.data);
+      })
       .catch(() => setError('Could not load applications.'))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
-  const fmtDate = (d) => new Date(d).toLocaleDateString();
+  useEffect(load, [filters.status, filters.domain]);
+
+  const fmtDate = (date) => new Date(date).toLocaleDateString();
+
+  const updateStatus = async (id, status) => {
+    try {
+      const res = await api.patch(`/applications/${id}/status`, { status });
+      setApplications((prev) => prev.map((item) => (item._id === id ? res.data.data : item)));
+      const statsRes = await api.get('/applications/stats');
+      setStats(statsRes.data.data);
+    } catch {
+      alert('Could not update application status.');
+    }
+  };
+
+  const handleCompanySearch = (event) => {
+    event.preventDefault();
+    load();
+  };
 
   return (
     <>
       <div className="page-header">
-        <h1>Admin · Applications</h1>
-        <Link to="/admin" className="btn btn-outline">
-          ← Back to dashboard
-        </Link>
+        <div>
+          <h1>Admin - Applications</h1>
+          <p className="muted page-subtitle">Review applicants, filter by domain/company, and manage status.</p>
+        </div>
+        <Link to="/admin" className="btn btn-outline">Back to dashboard</Link>
       </div>
+
+      {stats && (
+        <div className="stats-grid">
+          <div className="stat-card"><span>Total requests</span><strong>{stats.total}</strong></div>
+          <div className="stat-card"><span>Pending</span><strong>{stats.byStatus.Pending}</strong></div>
+          <div className="stat-card"><span>Approved</span><strong>{stats.byStatus.Approved}</strong></div>
+          <div className="stat-card"><span>Rejected</span><strong>{stats.byStatus.Rejected}</strong></div>
+        </div>
+      )}
+
+      <form className="admin-filterbar" onSubmit={handleCompanySearch}>
+        <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}>
+          {statuses.map((status) => <option key={status}>{status}</option>)}
+        </select>
+        <select value={filters.domain} onChange={(e) => setFilters((prev) => ({ ...prev, domain: e.target.value }))}>
+          <option value="">All domains</option>
+          {domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}
+        </select>
+        <input
+          placeholder="Search company"
+          value={filters.company}
+          onChange={(e) => setFilters((prev) => ({ ...prev, company: e.target.value }))}
+        />
+        <button className="btn btn-outline" type="submit">Search</button>
+      </form>
+
+      {stats && (
+        <div className="insight-grid">
+          <section className="insight-panel">
+            <h2>Requests by domain</h2>
+            {stats.byDomain.length === 0 ? <p className="muted">No domain data yet.</p> : stats.byDomain.map((item) => (
+              <div className="insight-row" key={item.domain}><span>{item.domain}</span><strong>{item.count}</strong></div>
+            ))}
+          </section>
+          <section className="insight-panel">
+            <h2>Top companies</h2>
+            {stats.byCompany.length === 0 ? <p className="muted">No company data yet.</p> : stats.byCompany.map((item) => (
+              <div className="insight-row" key={item.company}><span>{item.company}</span><strong>{item.count}</strong></div>
+            ))}
+          </section>
+        </div>
+      )}
 
       {loading ? (
         <Loader />
       ) : error ? (
         <div className="alert alert-error">{error}</div>
       ) : applications.length === 0 ? (
-        <div className="state">No applications submitted yet.</div>
+        <div className="state">No applications match these filters.</div>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Applicant</th>
-                <th>Email</th>
-                <th>Phone</th>
                 <th>Opportunity</th>
+                <th>Domain</th>
+                <th>Status</th>
                 <th>Resume</th>
                 <th>Applied</th>
+                <th>Decision</th>
               </tr>
             </thead>
             <tbody>
-              {applications.map((a) => (
-                <tr key={a._id}>
-                  <td>{a.name}</td>
-                  <td>{a.email}</td>
-                  <td>{a.phone || '—'}</td>
-                  <td>
-                    {a.opportunityId
-                      ? `${a.opportunityId.title} · ${a.opportunityId.company}`
-                      : '(deleted opportunity)'}
-                  </td>
-                  <td>
-                    {a.resumeLink ? (
-                      <a href={a.resumeLink} target="_blank" rel="noreferrer" className="back-link" style={{ margin: 0 }}>
-                        View ↗
-                      </a>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td>{fmtDate(a.createdAt)}</td>
-                </tr>
-              ))}
+              {applications.map((application) => {
+                const opportunity = application.opportunityId;
+                return (
+                  <tr key={application._id}>
+                    <td>
+                      <strong>{application.name}</strong>
+                      <div className="muted">{application.email}</div>
+                      <div className="muted">{application.phone || 'No phone'}</div>
+                    </td>
+                    <td>{opportunity ? `${opportunity.title} - ${opportunity.company}` : 'Deleted opportunity'}</td>
+                    <td>{opportunity?.domain || '-'}</td>
+                    <td><span className={`badge ${statusClass[application.status] || ''}`}>{application.status}</span></td>
+                    <td>
+                      {application.resumeLink ? (
+                        <button className="link-button" type="button" onClick={() => setPreview(application)}>View</button>
+                      ) : '-'}
+                    </td>
+                    <td>{fmtDate(application.createdAt)}</td>
+                    <td>
+                      <div className="table-actions">
+                        <button className="btn btn-outline btn-sm" disabled={application.status === 'Approved'} onClick={() => updateStatus(application._id, 'Approved')}>Approve</button>
+                        <button className="btn btn-danger btn-sm" disabled={application.status === 'Rejected'} onClick={() => updateStatus(application._id, 'Rejected')}>Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {preview && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="resume-modal">
+            <div className="modal-head">
+              <div>
+                <h2>{preview.name}'s resume</h2>
+                <p className="muted">{preview.opportunityId?.title} - {preview.opportunityId?.company}</p>
+              </div>
+              <button className="btn btn-outline btn-sm" type="button" onClick={() => setPreview(null)}>Close</button>
+            </div>
+            <iframe title="Resume preview" src={preview.resumeLink} />
+            <div className="modal-foot">
+              <a href={preview.resumeLink} target="_blank" rel="noreferrer" className="btn btn-outline">Open in new tab</a>
+            </div>
+          </div>
         </div>
       )}
     </>
