@@ -71,7 +71,7 @@ export default function AdminDashboard() {
               {stats.recentApplications.map((application) => (
                 <div className="insight-row" key={application._id}>
                   <span>{application.name} - {application.opportunityId?.title || 'Deleted opportunity'}</span>
-                  <strong>{application.status}</strong>
+                  <strong>{application.status || 'Pending'}</strong>
                 </div>
               ))}
             </section>

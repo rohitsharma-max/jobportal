@@ -60,7 +60,8 @@ const getApplications = asyncHandler(async (req, res) => {
   const query = {};
 
   if (opportunityId) query.opportunityId = opportunityId;
-  if (status) query.status = status;
+  if (status === 'Pending') query.status = { $in: ['Pending', null] };
+  else if (status) query.status = status;
 
   if (domain || company) {
     const opportunityQuery = {};
@@ -128,7 +129,7 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
 // GET /api/applications/stats  (admin) - dashboard counts by status/domain/company.
 const getApplicationStats = asyncHandler(async (req, res) => {
   const [statusCounts, domainCounts, companyCounts, recentApplications] = await Promise.all([
-    Application.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    Application.aggregate([{ $group: { _id: { $ifNull: ['$status', 'Pending'] }, count: { $sum: 1 } } }]),
     Application.aggregate([
       {
         $lookup: {

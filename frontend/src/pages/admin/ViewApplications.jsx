@@ -146,7 +146,7 @@ export default function ViewApplications() {
                     </td>
                     <td>{opportunity ? `${opportunity.title} - ${opportunity.company}` : 'Deleted opportunity'}</td>
                     <td>{opportunity?.domain || '-'}</td>
-                    <td><span className={`badge ${statusClass[application.status] || ''}`}>{application.status}</span></td>
+                    <td><span className={`badge ${statusClass[application.status || 'Pending'] || ''}`}>{application.status || 'Pending'}</span></td>
                     <td>
                       {application.resumeLink ? (
                         <button className="link-button" type="button" onClick={() => setPreview(application)}>View</button>
@@ -155,8 +155,8 @@ export default function ViewApplications() {
                     <td>{fmtDate(application.createdAt)}</td>
                     <td>
                       <div className="table-actions">
-                        <button className="btn btn-outline btn-sm" disabled={application.status === 'Approved'} onClick={() => updateStatus(application._id, 'Approved')}>Approve</button>
-                        <button className="btn btn-danger btn-sm" disabled={application.status === 'Rejected'} onClick={() => updateStatus(application._id, 'Rejected')}>Reject</button>
+                        <button className="btn btn-outline btn-sm" disabled={(application.status || 'Pending') === 'Approved'} onClick={() => updateStatus(application._id, 'Approved')}>Approve</button>
+                        <button className="btn btn-danger btn-sm" disabled={(application.status || 'Pending') === 'Rejected'} onClick={() => updateStatus(application._id, 'Rejected')}>Reject</button>
                       </div>
                     </td>
                   </tr>

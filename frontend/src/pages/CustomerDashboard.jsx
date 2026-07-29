@@ -25,7 +25,8 @@ export default function CustomerDashboard() {
   const fmtDate = (date) => new Date(date).toLocaleDateString();
   const counts = applications.reduce(
     (acc, application) => {
-      acc[application.status] = (acc[application.status] || 0) + 1;
+      const status = application.status || 'Pending';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     },
     { Pending: 0, Approved: 0, Rejected: 0 }
@@ -70,7 +71,7 @@ export default function CustomerDashboard() {
                       </p>
                     </div>
                     <div className="application-meta">
-                      <span className={`badge ${statusClass[application.status] || ''}`}>{application.status}</span>
+                      <span className={`badge ${statusClass[application.status || 'Pending'] || ''}`}>{application.status || 'Pending'}</span>
                       <span>Applied {fmtDate(application.createdAt)}</span>
                       {application.reviewedAt && <span>Reviewed {fmtDate(application.reviewedAt)}</span>}
                     </div>
