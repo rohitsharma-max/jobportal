@@ -1,45 +1,52 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
+const { verifyAccessToken } = require('../utils/tokens');
 
-// Verifies the JWT from the Authorization header and attaches req.user.
+// Sends a 401 with a machine-readable `code` so the frontend can tell an
+// expired session (refresh and retry silently) from a bad one (log out).
+const deny = (res, code, message) =>
+  res.status(401).json({ success: false, data: null, code, message });
+
+// Verifies the access token from the Authorization header and attaches req.user.
 const protect = asyncHandler(async (req, res, next) => {
-  let token;
-  const header = req.headers.authorization;
-  if (header && header.startsWith('Bearer ')) {
-    token = header.split(' ')[1];
-  }
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 
   if (!token) {
-    res.status(401);
-    throw new Error('Not authorized, no token');
+    return deny(res, 'NO_TOKEN', 'Not authorized, no token provided');
   }
 
   let decoded;
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    res.status(401);
-    throw new Error('Not authorized, token invalid');
+    // Rejects refresh tokens too — they carry type:'refresh'.
+    decoded = verifyAccessToken(token);
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return deny(res, 'TOKEN_EXPIRED', 'Session expired, please refresh');
+    }
+    return deny(res, 'TOKEN_INVALID', 'Not authorized, token invalid');
   }
 
   const user = await User.findById(decoded.id);
   if (!user) {
-    res.status(401);
-    throw new Error('Not authorized, user no longer exists');
+    return deny(res, 'USER_GONE', 'Not authorized, user no longer exists');
   }
 
   req.user = user;
-  next();
+  return next();
 });
 
 // Must run after protect. Allows only admins through.
 const adminOnly = (req, res, next) => {
   if (req.user?.role !== 'admin') {
-    res.status(403);
-    throw new Error('Admin access only');
+    return res.status(403).json({
+      success: false,
+      data: null,
+      code: 'FORBIDDEN',
+      message: 'Admin access only',
+    });
   }
-  next();
+  return next();
 };
 
 module.exports = { protect, adminOnly };

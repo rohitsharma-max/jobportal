@@ -1,33 +1,26 @@
 const mongoose = require('mongoose');
-const { DOMAINS, OPPORTUNITY_TYPES } = require('../config/constants');
 
+// NOTE: no `required` / `enum` validators here on purpose. All field validation
+// lives in src/validation/schemas.js (Joi) and runs as route middleware before
+// any controller — including the domain and type allow-lists, which Joi checks
+// against config/constants.js. What stays is structural: types and defaults.
 const opportunitySchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, 'Title is required'],
       trim: true,
     },
     company: {
       type: String,
-      required: [true, 'Company is required'],
       trim: true,
     },
     domain: {
       type: String,
-      required: [true, 'Domain is required'],
-      enum: {
-        values: DOMAINS,
-        message: '{VALUE} is not a valid domain',
-      },
+      trim: true,
     },
     type: {
       type: String,
-      required: [true, 'Type is required'],
-      enum: {
-        values: OPPORTUNITY_TYPES,
-        message: 'Type must be either Internship or Job',
-      },
+      trim: true,
     },
     location: {
       type: String,
@@ -41,7 +34,6 @@ const opportunitySchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, 'Description is required'],
       trim: true,
     },
     stipendOrSalary: {

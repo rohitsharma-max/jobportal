@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import Loader from '../../components/Loader';
+import { useToast } from '../../components/Toast';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [opportunities, setOpportunities] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,8 +31,9 @@ export default function AdminDashboard() {
     try {
       await api.delete(`/opportunities/${id}`);
       setOpportunities((prev) => prev.filter((opportunity) => opportunity._id !== id));
-    } catch {
-      alert('Delete failed. Please try again.');
+      toast(`"${title}" deleted.`, 'success');
+    } catch (err) {
+      toast(err.response?.data?.message || 'Delete failed. Please try again.', 'error');
     }
   };
 

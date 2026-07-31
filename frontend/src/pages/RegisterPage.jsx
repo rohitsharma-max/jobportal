@@ -3,9 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import useFormValidation from '../hooks/useFormValidation';
-import FormField from '../components/FormField';
-
-const EMAIL_RE = /^\S+@\S+\.\S+$/;
+import FormField, { fieldProps } from '../components/FormField';
+import {
+  nameRule,
+  emailRule,
+  passwordRule,
+  applyServerErrors,
+  LIMITS,
+} from '../utils/validationRules';
 
 /* ── Password strength helper ── */
 function getStrength(pw) {
@@ -31,33 +36,17 @@ export default function RegisterPage() {
   const [serverError, setServerError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Rules come from the shared module so they always match the backend schema.
   const validators = useMemo(
     () => ({
-      name: (v) => {
-        const t = v?.trim() || '';
-        if (!t) return 'Name is required';
-        if (t.length < 2) return 'Name must be at least 2 characters';
-        if (t.length > 80) return 'Name must be 80 characters or less';
-        return '';
-      },
-      email: (v) => {
-        const t = v?.trim() || '';
-        if (!t) return 'Email is required';
-        if (!EMAIL_RE.test(t)) return 'Enter a valid email address';
-        if (t.length > 254) return 'Email is too long';
-        return '';
-      },
-      password: (v) => {
-        if (!v) return 'Password is required';
-        if (v.length < 6) return 'Password must be at least 6 characters';
-        if (v.length > 72) return 'Password must be 72 characters or less';
-        return '';
-      },
+      name: nameRule,
+      email: emailRule,
+      password: passwordRule,
     }),
     [],
   );
 
-  const { errors, validate, validateField, clearFieldError } =
+  const { errors, validate, validateField, clearFieldError, setFieldError } =
     useFormValidation(validators);
 
   const handleChange = (e) => {
@@ -83,7 +72,8 @@ export default function RegisterPage() {
       toast('Account created successfully!', 'success');
       navigate('/', { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registration failed';
+      // A duplicate email comes back as errors.email and highlights that input.
+      const msg = applyServerErrors(err, setFieldError, ['name', 'email', 'password']);
       setServerError(msg);
       toast(msg, 'error');
       setSubmitting(false);
@@ -104,9 +94,10 @@ export default function RegisterPage() {
             value={form.name}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.name ? 'field-invalid' : ''}
+            maxLength={LIMITS.name.max}
             placeholder="Rohit Sharma"
             autoComplete="name"
+            {...fieldProps('name', errors.name, true)}
           />
         </FormField>
 
@@ -118,9 +109,10 @@ export default function RegisterPage() {
             value={form.email}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.email ? 'field-invalid' : ''}
+            maxLength={LIMITS.email.max}
             placeholder="you@example.com"
             autoComplete="email"
+            {...fieldProps('email', errors.email, true)}
           />
         </FormField>
 
@@ -132,9 +124,11 @@ export default function RegisterPage() {
             value={form.password}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.password ? 'field-invalid' : ''}
-            placeholder="Min 6 characters"
+            maxLength={LIMITS.password.max}
+            minLength={LIMITS.password.min}
+            placeholder={`Min ${LIMITS.password.min} characters`}
             autoComplete="new-password"
+            {...fieldProps('password', errors.password, true)}
           />
           {/* Password strength indicator */}
           {form.password && (

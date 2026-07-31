@@ -5,8 +5,10 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  // logout() now also tells the server to retire this account's refresh tokens,
+  // so it is async — await it before navigating away.
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 

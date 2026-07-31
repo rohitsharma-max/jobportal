@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import Loader from '../../components/Loader';
+import { useToast } from '../../components/Toast';
+import { LIMITS, optional } from '../../utils/validationRules';
 
 const statuses = ['All', 'Pending', 'Approved', 'Rejected'];
+// Same cap the backend query schema enforces on ?company=
+const companyRule = optional('Company search', { max: LIMITS.search.max });
 const statusClass = {
   Pending: 'badge-warning',
   Approved: 'badge-success',
@@ -11,10 +15,12 @@ const statusClass = {
 };
 
 export default function ViewApplications() {
+  const toast = useToast();
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState(null);
   const [domains, setDomains] = useState([]);
   const [filters, setFilters] = useState({ status: 'All', domain: '', company: '' });
+  const [companyError, setCompanyError] = useState('');
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,13 +58,30 @@ export default function ViewApplications() {
       setApplications((prev) => prev.map((item) => (item._id === id ? res.data.data : item)));
       const statsRes = await api.get('/applications/stats');
       setStats(statsRes.data.data);
-    } catch {
-      alert('Could not update application status.');
+      toast(`Application ${status.toLowerCase()}.`, 'success');
+    } catch (err) {
+      toast(
+        err.response?.data?.message || 'Could not update application status.',
+        'error',
+      );
     }
+  };
+
+  const handleCompanyChange = (event) => {
+    const { value } = event.target;
+    setFilters((prev) => ({ ...prev, company: value }));
+    if (companyError) setCompanyError('');
   };
 
   const handleCompanySearch = (event) => {
     event.preventDefault();
+    const invalid = companyRule(filters.company);
+    if (invalid) {
+      setCompanyError(invalid);
+      toast(invalid, 'error');
+      return;
+    }
+    setCompanyError('');
     load();
   };
 
@@ -81,21 +104,39 @@ export default function ViewApplications() {
         </div>
       )}
 
-      <form className="admin-filterbar" onSubmit={handleCompanySearch}>
-        <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}>
+      <form className="admin-filterbar" onSubmit={handleCompanySearch} noValidate>
+        <select
+          value={filters.status}
+          aria-label="Filter by status"
+          onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+        >
           {statuses.map((status) => <option key={status}>{status}</option>)}
         </select>
-        <select value={filters.domain} onChange={(e) => setFilters((prev) => ({ ...prev, domain: e.target.value }))}>
+        <select
+          value={filters.domain}
+          aria-label="Filter by domain"
+          onChange={(e) => setFilters((prev) => ({ ...prev, domain: e.target.value }))}
+        >
           <option value="">All domains</option>
           {domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}
         </select>
         <input
           placeholder="Search company"
+          aria-label="Search by company"
+          maxLength={LIMITS.search.max}
+          aria-invalid={companyError ? true : undefined}
+          aria-describedby={companyError ? 'company-filter-error' : undefined}
+          className={companyError ? 'field-invalid' : ''}
           value={filters.company}
-          onChange={(e) => setFilters((prev) => ({ ...prev, company: e.target.value }))}
+          onChange={handleCompanyChange}
         />
         <button className="btn btn-outline" type="submit">Search</button>
       </form>
+      {companyError && (
+        <span className="field-error" id="company-filter-error" role="alert">
+          {companyError}
+        </span>
+      )}
 
       {stats && (
         <div className="insight-grid">

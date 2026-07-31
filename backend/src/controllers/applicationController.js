@@ -2,16 +2,14 @@ const Application = require('../models/Application');
 const Opportunity = require('../models/Opportunity');
 const asyncHandler = require('../utils/asyncHandler');
 const sendEmail = require('../utils/sendEmail');
-const { validateApplication } = require('../utils/validation');
-
-const VALID_STATUSES = ['Pending', 'Approved', 'Rejected'];
+const escapeRegex = require('../utils/escapeRegex');
+const { APPLICATION_STATUSES } = require('../config/constants');
 
 const populateApplication = (query) =>
   query
     .populate('opportunityId', 'title company domain type location')
     .populate('userId', 'name email')
     .populate('reviewedBy', 'name email');
-
 
 const getStatusEmail = (application, status) => {
   const opportunity = application.opportunityId;
@@ -40,23 +38,43 @@ const getStatusEmail = (application, status) => {
 
   return null;
 };
+
 // POST /api/applications  (logged-in user) - submit an application.
-// Accepts multipart/form-data: text fields + an optional "resume" file.
+// Accepts multipart/form-data: text fields + a "resume" file. Input has already
+// been validated by validate(createApplicationSchema); a resume file OR a
+// resumeLink is guaranteed to be present, and resumeLink already holds the
+// uploaded file's URL when a file was sent.
 const createApplication = asyncHandler(async (req, res) => {
-  // Validate & sanitize all input fields (name, email, phone, coverNote, resumeLink, opportunityId).
-  const payload = validateApplication(res, req.body, req.file);
+  const payload = req.valid.body;
 
   const opportunity = await Opportunity.findById(payload.opportunityId);
   if (!opportunity) {
-    res.status(404);
-    throw new Error('Opportunity not found');
+    return res.status(404).json({
+      success: false,
+      data: null,
+      message: 'Opportunity not found',
+    });
   }
 
-  const application = await Application.create({
-    ...payload,
-    userId: req.user._id,
-  });
-
+  let application;
+  try {
+    application = await Application.create({
+      ...payload,
+      // Always the authenticated user — never taken from the request body.
+      userId: req.user._id,
+    });
+  } catch (err) {
+    // Unique index on (userId, opportunityId).
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        data: null,
+        code: 'ALREADY_APPLIED',
+        message: 'You have already applied to this opportunity',
+      });
+    }
+    throw err;
+  }
 
   // Fire a confirmation email (non-blocking: never fail the request on email error).
   try {
@@ -71,7 +89,7 @@ const createApplication = asyncHandler(async (req, res) => {
     console.error('Email send failed:', err.message);
   }
 
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     data: application,
     message: 'Application submitted',
@@ -80,20 +98,26 @@ const createApplication = asyncHandler(async (req, res) => {
 
 // GET /api/applications  (admin) - list all, optional filters.
 const getApplications = asyncHandler(async (req, res) => {
-  const { opportunityId, status, domain, company } = req.query;
+  const { opportunityId, status, domain, company } = req.valid.query;
   const query = {};
 
   if (opportunityId) query.opportunityId = opportunityId;
+  // Older documents predate the status default, so treat missing as Pending.
   if (status === 'Pending') query.status = { $in: ['Pending', null] };
   else if (status) query.status = status;
 
   if (domain || company) {
     const opportunityQuery = {};
     if (domain) opportunityQuery.domain = domain;
-    if (company) opportunityQuery.company = new RegExp(company, 'i');
+    // Escaped: the raw value would otherwise be compiled as a regex pattern.
+    if (company) opportunityQuery.company = new RegExp(escapeRegex(company), 'i');
 
     const opportunities = await Opportunity.find(opportunityQuery).select('_id');
-    query.opportunityId = { $in: opportunities.map((opportunity) => opportunity._id) };
+    const ids = opportunities.map((opportunity) => opportunity._id);
+    // Respect an explicit opportunityId filter alongside domain/company.
+    query.opportunityId = opportunityId
+      ? { $in: ids.filter((id) => String(id) === opportunityId) }
+      : { $in: ids };
   }
 
   const applications = await populateApplication(Application.find(query)).sort({ createdAt: -1 });
@@ -120,22 +144,24 @@ const getMyApplications = asyncHandler(async (req, res) => {
 
 // PATCH /api/applications/:id/status  (admin) - approve/reject an application.
 const updateApplicationStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
-  if (!VALID_STATUSES.includes(status)) {
-    res.status(400);
-    throw new Error('Status must be Pending, Approved, or Rejected');
-  }
+  const { id } = req.valid.params;
+  const { status } = req.valid.body;
 
-  const existingApplication = await Application.findById(req.params.id);
+  const existingApplication = await Application.findById(id);
   if (!existingApplication) {
-    res.status(404);
-    throw new Error('Application not found');
+    return res.status(404).json({
+      success: false,
+      data: null,
+      message: 'Application not found',
+    });
   }
 
   const previousStatus = existingApplication.status || 'Pending';
   existingApplication.status = status;
   existingApplication.reviewedAt = status === 'Pending' ? null : new Date();
   existingApplication.reviewedBy = status === 'Pending' ? null : req.user._id;
+  // Plain save() is safe: the model carries no field validators, so a record
+  // written before the current rules existed can still be approved or rejected.
   await existingApplication.save();
 
   const application = await populateApplication(Application.findById(existingApplication._id));
@@ -155,7 +181,7 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
     }
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     data: application,
     message: 'Application status updated',
@@ -196,7 +222,7 @@ const getApplicationStats = asyncHandler(async (req, res) => {
     populateApplication(Application.find().sort({ createdAt: -1 }).limit(5)),
   ]);
 
-  const byStatus = VALID_STATUSES.reduce((acc, status) => {
+  const byStatus = APPLICATION_STATUSES.reduce((acc, status) => {
     acc[status] = statusCounts.find((item) => item._id === status)?.count || 0;
     return acc;
   }, {});

@@ -15,7 +15,12 @@ const app = express();
 
 // --- Global middleware ---
 app.use(cors()); // allow the React frontend to call this API
-app.use(express.json()); // parse JSON request bodies into req.body
+app.use(express.json({ limit: '100kb' })); // parse JSON request bodies into req.body
+app.use(express.urlencoded({ extended: false, limit: '100kb' })); // form-encoded posts
+
+// Rate limiters read req.ip; behind a single reverse proxy this makes it the
+// real client address instead of the proxy's.
+app.set('trust proxy', 1);
 
 // --- Health check (proves the server is up) ---
 app.get('/api/health', (req, res) => {

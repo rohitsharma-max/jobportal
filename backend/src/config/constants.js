@@ -18,4 +18,22 @@ const DOMAINS = [
 
 const OPPORTUNITY_TYPES = ['Internship', 'Job'];
 
-module.exports = { DOMAINS, OPPORTUNITY_TYPES };
+// The only statuses an application can hold. Single source of truth for the
+// model enum, the validation schemas, and the stats aggregation.
+const APPLICATION_STATUSES = ['Pending', 'Approved', 'Rejected'];
+
+// Resume upload constraints — mirrored by the frontend file picker.
+const RESUME_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const RESUME_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+module.exports = {
+  DOMAINS,
+  OPPORTUNITY_TYPES,
+  APPLICATION_STATUSES,
+  RESUME_MAX_BYTES,
+  RESUME_MIME_TYPES,
+};
