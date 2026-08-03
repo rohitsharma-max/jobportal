@@ -1,31 +1,39 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+// NOTE: no `required` / `match` / `minlength` validators here on purpose.
+// All field validation lives in src/validation/schemas.js (Joi) and runs as
+// route middleware before any controller. Keeping a second rulebook on the
+// model would mean two places to change and two chances to disagree.
+// What stays is structural: types, defaults, normalisation, and indexes.
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Name is required'],
       trim: true,
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
-      unique: true,
+      unique: true, // an index (uniqueness constraint), not field validation
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
       select: false, // never returned by default
     },
     role: {
       type: String,
+      // Kept: no Joi schema covers `role` because the server sets it, never the
+      // client — so this enum is its only guard.
       enum: ['user', 'admin'],
       default: 'user',
+    },
+    // Bumped on logout. Refresh tokens embed the version they were minted with,
+    // so incrementing this invalidates every refresh token already handed out.
+    tokenVersion: {
+      type: Number,
+      default: 0,
     },
   },
   { timestamps: true }

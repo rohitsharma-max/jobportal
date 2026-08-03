@@ -1,38 +1,35 @@
 const mongoose = require('mongoose');
 
+// NOTE: no `required` / `match` / `enum` validators here on purpose. All field
+// validation lives in src/validation/schemas.js (Joi) and runs as route
+// middleware before any controller. What stays is structural: types, refs,
+// defaults, and the unique index below.
 const applicationSchema = new mongoose.Schema(
   {
     opportunityId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Opportunity',
-      required: [true, 'opportunityId is required'],
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'userId is required'],
     },
     name: {
       type: String,
-      required: [true, 'Name is required'],
       trim: true,
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
       trim: true,
       lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
     },
     phone: {
       type: String,
       trim: true,
-      default: '',
     },
     resumeLink: {
       type: String,
       trim: true,
-      default: '',
     },
     coverNote: {
       type: String,
@@ -41,7 +38,6 @@ const applicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Rejected'],
       default: 'Pending',
     },
     reviewedAt: {
@@ -56,5 +52,20 @@ const applicationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// One application per user per opportunity. This is a database CONSTRAINT, not
+// field validation — it is the only thing that can stop two concurrent submits
+// from both passing an application-level "already applied?" check. The second
+// one fails with duplicate-key error 11000, which the controller turns into 409.
+applicationSchema.index({ userId: 1, opportunityId: 1 }, { unique: true });
+
+// Supporting indexes for the three list queries, each ending in `createdAt: -1`
+// so the newest-first sort is served by the index rather than sorted in memory:
+//   /applications?opportunityId=  — applicants for one role
+//   /applications/me              — the caller's own history
+//   /applications?status=         — the admin review queue
+applicationSchema.index({ opportunityId: 1, createdAt: -1 });
+applicationSchema.index({ userId: 1, createdAt: -1 });
+applicationSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Application', applicationSchema);

@@ -13,6 +13,7 @@ export default function EditOpportunity() {
   const [loadError, setLoadError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState(null);
 
   // Fetch the opportunity to pre-fill the form.
   useEffect(() => {
@@ -26,11 +27,14 @@ export default function EditOpportunity() {
   const handleSubmit = async (payload) => {
     setSubmitting(true);
     setError('');
+    setFieldErrors(null);
     try {
       await api.put(`/opportunities/${id}`, payload);
       navigate('/admin');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not update opportunity.');
+      // Per-field messages from validate() get highlighted on their inputs.
+      setFieldErrors(err.response?.data?.errors || null);
       setSubmitting(false);
     }
   };
@@ -59,6 +63,7 @@ export default function EditOpportunity() {
           onSubmit={handleSubmit}
           submitting={submitting}
           submitLabel="Save changes"
+          serverErrors={fieldErrors}
         />
       </div>
     </>

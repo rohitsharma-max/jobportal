@@ -8,18 +8,33 @@ const {
   updateApplicationStatus,
 } = require('../controllers/applicationController');
 const { protect, adminOnly } = require('../middleware/auth');
-const { uploadResume } = require('../config/cloudinary');
+const validate = require('../middleware/validate');
+const { uploadResumeField } = require('../config/cloudinary');
+const {
+  createApplicationSchema,
+  listApplicationsSchema,
+  listMyApplicationsSchema,
+  updateApplicationStatusSchema,
+} = require('../validation/schemas');
 
 // Mounted at /api/applications
-// - POST: any logged-in user; parses an optional "resume" file upload.
-// - GET:  admin only.
+//
+// POST order is deliberate: uploadResumeField must run before validate() because
+// multer is what populates req.body from the multipart payload and req.file from
+// the attachment — the schema's refine() needs both.
 router
   .route('/')
-  .get(protect, adminOnly, getApplications)
-  .post(protect, uploadResume.single('resume'), createApplication);
+  .get(protect, adminOnly, validate(listApplicationsSchema), getApplications)
+  .post(protect, uploadResumeField, validate(createApplicationSchema), createApplication);
 
-router.get('/me', protect, getMyApplications);
+router.get('/me', protect, validate(listMyApplicationsSchema), getMyApplications);
 router.get('/stats', protect, adminOnly, getApplicationStats);
-router.patch('/:id/status', protect, adminOnly, updateApplicationStatus);
+router.patch(
+  '/:id/status',
+  protect,
+  adminOnly,
+  validate(updateApplicationStatusSchema),
+  updateApplicationStatus
+);
 
 module.exports = router;

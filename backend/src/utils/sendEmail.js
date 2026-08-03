@@ -17,7 +17,13 @@ if (isConfigured) {
 
 async function sendEmail({ to, subject, html }) {
   if (!isConfigured) {
-    console.log(`✉️  (email skipped — EMAIL_USER/EMAIL_PASS not set) would send "${subject}" to ${to}`);
+    // Silent under test: the suite exercises this branch constantly, and the
+    // notice would bury the actual test output.
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(
+        `✉️  (email skipped — EMAIL_USER/EMAIL_PASS not set) would send "${subject}" to ${to}`
+      );
+    }
     return;
   }
   await transporter.sendMail({

@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 const Opportunity = require('./models/Opportunity');
 const Application = require('./models/Application');
 const User = require('./models/User');
+const RefreshToken = require('./models/RefreshToken');
 
 const sampleOpportunities = [
   {
@@ -88,8 +89,15 @@ async function seed() {
     await connectDB();
     await Opportunity.deleteMany({});
     await Application.deleteMany({});
+    // Sessions reference users that this script is about to replace, so any
+    // token left over from a previous seed would point at a deleted account.
+    await RefreshToken.deleteMany({});
+    // `status` is omitted from the samples above and supplied by the schema
+    // default ('open'), which insertMany applies.
     const created = await Opportunity.insertMany(sampleOpportunities);
-    console.log(`🌱 Seeded ${created.length} opportunities. Cleared applications.`);
+    console.log(
+      `🌱 Seeded ${created.length} opportunities. Cleared applications and sessions.`
+    );
 
     // Create (or reset) the default admin account.
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@portal.com';

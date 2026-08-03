@@ -9,11 +9,13 @@ import { ToastProvider } from './components/Toast';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
+      {/* ToastProvider must sit OUTSIDE AuthProvider: AuthProvider calls
+          useToast() to announce a session that expired on its own. */}
+      <ToastProvider>
+        <AuthProvider>
           <App />
-        </ToastProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   </StrictMode>
 );

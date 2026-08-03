@@ -3,9 +3,13 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import useFormValidation from '../hooks/useFormValidation';
-import FormField from '../components/FormField';
-
-const EMAIL_RE = /^\S+@\S+\.\S+$/;
+import FormField, { fieldProps } from '../components/FormField';
+import {
+  emailRule,
+  passwordPresenceRule,
+  applyServerErrors,
+  LIMITS,
+} from '../utils/validationRules';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -18,22 +22,16 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Rules come from the shared module so they always match the backend schema.
   const validators = useMemo(
     () => ({
-      email: (v) => {
-        if (!v?.trim()) return 'Email is required';
-        if (!EMAIL_RE.test(v.trim())) return 'Enter a valid email address';
-        return '';
-      },
-      password: (v) => {
-        if (!v) return 'Password is required';
-        return '';
-      },
+      email: emailRule,
+      password: passwordPresenceRule,
     }),
     [],
   );
 
-  const { errors, validate, validateField, clearFieldError } =
+  const { errors, validate, validateField, clearFieldError, setFieldError } =
     useFormValidation(validators);
 
   const handleChange = (e) => {
@@ -59,7 +57,8 @@ export default function LoginPage() {
       toast('Logged in successfully!', 'success');
       navigate(user.role === 'admin' ? '/admin' : from, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed';
+      // Field-level rejections land on the matching input; anything else in the banner.
+      const msg = applyServerErrors(err, setFieldError, ['email', 'password']);
       setServerError(msg);
       toast(msg, 'error');
       setSubmitting(false);
@@ -79,9 +78,10 @@ export default function LoginPage() {
             value={form.email}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.email ? 'field-invalid' : ''}
+            maxLength={LIMITS.email.max}
             placeholder="you@example.com"
             autoComplete="email"
+            {...fieldProps('email', errors.email, true)}
           />
         </FormField>
 
@@ -93,9 +93,9 @@ export default function LoginPage() {
             value={form.password}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.password ? 'field-invalid' : ''}
             placeholder="••••••••"
             autoComplete="current-password"
+            {...fieldProps('password', errors.password, true)}
           />
         </FormField>
 

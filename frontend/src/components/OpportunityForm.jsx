@@ -1,10 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../api/axios';
-import FormField from './FormField';
+import FormField, { fieldProps } from './FormField';
 import useFormValidation from '../hooks/useFormValidation';
+import {
+  required,
+  optional,
+  oneOf,
+  urlRule,
+  requirementsRule,
+  splitRequirements,
+  LIMITS,
+} from '../utils/validationRules';
 
 const TYPES = ['Internship', 'Job'];
-const URL_RE = /^https?:\/\/.+/i;
 
 const EMPTY = {
   title: '',
@@ -21,15 +29,31 @@ const EMPTY = {
 
 // One form for both Add and Edit. `initial` pre-fills it (Edit mode);
 // `onSubmit` receives a clean payload with requirements as an array.
-export default function OpportunityForm({ initial, onSubmit, submitting, submitLabel = 'Save' }) {
+// `serverErrors` maps a field name to a backend message so a rejection from the
+// API highlights the offending input instead of only showing a banner.
+export default function OpportunityForm({
+  initial,
+  onSubmit,
+  submitting,
+  submitLabel = 'Save',
+  serverErrors,
+}) {
   const [form, setForm] = useState(EMPTY);
   const [domains, setDomains] = useState([]);
+  const [domainsError, setDomainsError] = useState('');
 
   useEffect(() => {
     api
       .get('/domains')
-      .then((res) => setDomains(res.data.data))
-      .catch(() => setDomains([]));
+      .then((res) => {
+        setDomains(res.data.data);
+        setDomainsError('');
+      })
+      .catch(() => {
+        setDomains([]);
+        // Previously this failed silently and left an unusable empty dropdown.
+        setDomainsError('Could not load the domain list. Reload the page to try again.');
+      });
   }, []);
 
   // When editing, load the existing values (requirements array -> comma string).
@@ -45,69 +69,35 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
     }
   }, [initial]);
 
+  // Rules come from the shared module so they always match the backend schema.
+  // domain/type are checked against the allowed values, not just non-empty, so a
+  // tampered <option> is rejected here rather than only by the API.
   const validators = useMemo(
     () => ({
-      title: (v) => {
-        const t = v?.trim() || '';
-        if (!t) return 'Title is required';
-        if (t.length < 3) return 'Title must be at least 3 characters';
-        if (t.length > 120) return 'Title must be 120 characters or less';
-        return '';
-      },
-      company: (v) => {
-        const t = v?.trim() || '';
-        if (!t) return 'Company is required';
-        if (t.length < 2) return 'Company must be at least 2 characters';
-        if (t.length > 100) return 'Company must be 100 characters or less';
-        return '';
-      },
-      domain: (v) => {
-        if (!v?.trim()) return 'Domain is required';
-        return '';
-      },
-      type: (v) => {
-        if (!v?.trim()) return 'Type is required';
-        return '';
-      },
-      description: (v) => {
-        const t = v?.trim() || '';
-        if (!t) return 'Description is required';
-        if (t.length < 20) return `Description needs at least 20 characters (${t.length}/20)`;
-        if (t.length > 3000) return 'Description must be 3000 characters or less';
-        return '';
-      },
-      location: (v) => {
-        if (v && v.trim().length > 120) return 'Location must be 120 characters or less';
-        return '';
-      },
-      experience: (v) => {
-        if (v && v.trim().length > 80) return 'Experience must be 80 characters or less';
-        return '';
-      },
-      stipendOrSalary: (v) => {
-        if (v && v.trim().length > 100) return 'Must be 100 characters or less';
-        return '';
-      },
-      applicationLink: (v) => {
-        const t = v?.trim() || '';
-        if (t && !URL_RE.test(t)) return 'Must be a valid URL (https://…)';
-        if (t.length > 500) return 'URL is too long';
-        return '';
-      },
-      requirements: (v) => {
-        if (!v) return '';
-        const items = v.split(',').map((s) => s.trim()).filter(Boolean);
-        if (items.length > 12) return 'Max 12 requirements allowed';
-        const tooLong = items.find((s) => s.length > 80);
-        if (tooLong) return 'Each requirement must be 80 characters or less';
-        return '';
-      },
+      title: required('Title', LIMITS.title),
+      company: required('Company', LIMITS.company),
+      domain: oneOf('Domain', domains),
+      type: oneOf('Type', TYPES),
+      description: required('Description', LIMITS.description),
+      location: optional('Location', LIMITS.location),
+      experience: optional('Experience', LIMITS.experience),
+      stipendOrSalary: optional('Stipend / Salary', LIMITS.stipendOrSalary),
+      applicationLink: urlRule('External application link'),
+      requirements: requirementsRule,
     }),
-    [],
+    [domains],
   );
 
-  const { errors, validate, validateField, clearFieldError } =
+  const { errors, validate, validateField, clearFieldError, setFieldError } =
     useFormValidation(validators);
+
+  // Surface backend field errors on the matching inputs.
+  useEffect(() => {
+    if (!serverErrors) return;
+    for (const [field, message] of Object.entries(serverErrors)) {
+      setFieldError(field, message);
+    }
+  }, [serverErrors, setFieldError]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -122,40 +112,43 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
     if (!validate(form)) return;
     const payload = {
       ...form,
-      requirements: form.requirements
-        ? form.requirements.split(',').map((s) => s.trim()).filter(Boolean)
-        : [],
+      requirements: splitRequirements(form.requirements),
     };
     onSubmit(payload);
   };
 
-  const reqCount = form.requirements
-    ? form.requirements.split(',').map((s) => s.trim()).filter(Boolean).length
-    : 0;
+  const reqCount = splitRequirements(form.requirements).length;
+  // Nothing can be created without a valid domain, so block submit until the
+  // list is available rather than letting the API reject it.
+  const blocked = submitting || Boolean(domainsError);
 
   return (
     <form className="form" onSubmit={handleSubmit} noValidate>
+      {domainsError && <div className="alert alert-error">{domainsError}</div>}
+
       <div className="form-row">
-        <FormField label="Title" name="title" error={errors.title} required charCount={form.title.trim().length} maxLength={120}>
+        <FormField label="Title" name="title" error={errors.title} required charCount={form.title.trim().length} maxLength={LIMITS.title.max}>
           <input
             id="title"
             name="title"
             value={form.title}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.title ? 'field-invalid' : ''}
+            maxLength={LIMITS.title.max}
             placeholder="e.g. Frontend Developer Intern"
+            {...fieldProps('title', errors.title, true)}
           />
         </FormField>
-        <FormField label="Company" name="company" error={errors.company} required charCount={form.company.trim().length} maxLength={100}>
+        <FormField label="Company" name="company" error={errors.company} required charCount={form.company.trim().length} maxLength={LIMITS.company.max}>
           <input
             id="company"
             name="company"
             value={form.company}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.company ? 'field-invalid' : ''}
+            maxLength={LIMITS.company.max}
             placeholder="e.g. Google"
+            {...fieldProps('company', errors.company, true)}
           />
         </FormField>
       </div>
@@ -168,7 +161,7 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
             value={form.domain}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.domain ? 'field-invalid' : ''}
+            {...fieldProps('domain', errors.domain, true)}
           >
             <option value="">Select a domain</option>
             {domains.map((d) => (
@@ -183,7 +176,7 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
             value={form.type}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.type ? 'field-invalid' : ''}
+            {...fieldProps('type', errors.type, true)}
           >
             <option value="">Select a type</option>
             {TYPES.map((t) => (
@@ -194,63 +187,69 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
       </div>
 
       <div className="form-row">
-        <FormField label="Location" name="location" error={errors.location} charCount={form.location.trim().length} maxLength={120}>
+        <FormField label="Location" name="location" error={errors.location} charCount={form.location.trim().length} maxLength={LIMITS.location.max}>
           <input
             id="location"
             name="location"
             value={form.location}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.location ? 'field-invalid' : ''}
+            maxLength={LIMITS.location.max}
             placeholder="e.g. Remote, Bangalore"
+            {...fieldProps('location', errors.location)}
           />
         </FormField>
-        <FormField label="Experience" name="experience" error={errors.experience} charCount={form.experience.trim().length} maxLength={80}>
+        <FormField label="Experience" name="experience" error={errors.experience} charCount={form.experience.trim().length} maxLength={LIMITS.experience.max}>
           <input
             id="experience"
             name="experience"
             value={form.experience}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.experience ? 'field-invalid' : ''}
+            maxLength={LIMITS.experience.max}
             placeholder="e.g. Fresher, 1-2 years"
+            {...fieldProps('experience', errors.experience)}
           />
         </FormField>
       </div>
 
-      <FormField label="Description" name="description" error={errors.description} required charCount={form.description.trim().length} maxLength={3000}>
+      <FormField label="Description" name="description" error={errors.description} required charCount={form.description.trim().length} maxLength={LIMITS.description.max}>
         <textarea
           id="description"
           name="description"
           value={form.description}
           onChange={handleChange}
           onBlur={handleBlur}
-          className={errors.description ? 'field-invalid' : ''}
+          maxLength={LIMITS.description.max}
           placeholder="Describe the role, responsibilities, and expectations…"
+          {...fieldProps('description', errors.description, true)}
         />
       </FormField>
 
       <div className="form-row">
-        <FormField label="Stipend / Salary" name="stipendOrSalary" error={errors.stipendOrSalary} charCount={form.stipendOrSalary.trim().length} maxLength={100}>
+        <FormField label="Stipend / Salary" name="stipendOrSalary" error={errors.stipendOrSalary} charCount={form.stipendOrSalary.trim().length} maxLength={LIMITS.stipendOrSalary.max}>
           <input
             id="stipendOrSalary"
             name="stipendOrSalary"
             value={form.stipendOrSalary}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.stipendOrSalary ? 'field-invalid' : ''}
+            maxLength={LIMITS.stipendOrSalary.max}
             placeholder="e.g. INR 15,000/month"
+            {...fieldProps('stipendOrSalary', errors.stipendOrSalary)}
           />
         </FormField>
         <FormField label="External application link" name="applicationLink" error={errors.applicationLink}>
           <input
             id="applicationLink"
             name="applicationLink"
+            type="url"
             value={form.applicationLink}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={errors.applicationLink ? 'field-invalid' : ''}
+            maxLength={LIMITS.url.max}
             placeholder="https://…"
+            {...fieldProps('applicationLink', errors.applicationLink)}
           />
         </FormField>
       </div>
@@ -259,7 +258,7 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
         label="Requirements (comma-separated)"
         name="requirements"
         error={errors.requirements}
-        hint={`${reqCount}/12 items`}
+        hint={`${reqCount}/${LIMITS.requirements.maxItems} items`}
       >
         <input
           id="requirements"
@@ -267,12 +266,12 @@ export default function OpportunityForm({ initial, onSubmit, submitting, submitL
           value={form.requirements}
           onChange={handleChange}
           onBlur={handleBlur}
-          className={errors.requirements ? 'field-invalid' : ''}
           placeholder="React, Node.js, MongoDB"
+          {...fieldProps('requirements', errors.requirements, false, true)}
         />
       </FormField>
 
-      <button type="submit" className="btn btn-primary" disabled={submitting}>
+      <button type="submit" className="btn btn-primary" disabled={blocked}>
         {submitting ? 'Saving…' : submitLabel}
       </button>
     </form>
