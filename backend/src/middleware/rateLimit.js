@@ -5,6 +5,11 @@ const rateLimit = require('express-rate-limit');
 const json = (message) => (req, res) =>
   res.status(429).json({ success: false, data: null, code: 'RATE_LIMITED', message });
 
+// The test suite drives login and refresh dozens of times from one address, and
+// counters that persist across cases would make unrelated assertions fail
+// depending on execution order. Limits stay fully active everywhere else.
+const skipInTests = () => process.env.NODE_ENV === 'test';
+
 // Login / register: 10 attempts per IP per 15 minutes.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -14,6 +19,7 @@ const authLimiter = rateLimit({
   // Only failed attempts count, so a legitimate user logging in repeatedly on a
   // shared IP isn't locked out.
   skipSuccessfulRequests: true,
+  skip: skipInTests,
   handler: json('Too many attempts. Please try again in 15 minutes.'),
 });
 
@@ -24,6 +30,7 @@ const refreshLimiter = rateLimit({
   limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTests,
   handler: json('Too many refresh attempts. Please log in again.'),
 });
 

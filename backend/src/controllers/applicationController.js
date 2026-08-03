@@ -3,23 +3,37 @@ const Opportunity = require('../models/Opportunity');
 const asyncHandler = require('../utils/asyncHandler');
 const sendEmail = require('../utils/sendEmail');
 const escapeRegex = require('../utils/escapeRegex');
-const { APPLICATION_STATUSES } = require('../config/constants');
+const escapeHtml = require('../utils/escapeHtml');
+const { paginate } = require('../utils/paginate');
+const {
+  APPLICATION_STATUSES,
+  OPPORTUNITY_PUBLIC_STATUS,
+} = require('../config/constants');
 
 const populateApplication = (query) =>
   query
-    .populate('opportunityId', 'title company domain type location')
+    .populate('opportunityId', 'title company domain type location status')
     .populate('userId', 'name email')
     .populate('reviewedBy', 'name email');
 
+// Populate is a direct _id lookup, so it is unaffected by the `open`-only filter
+// on the listing endpoints — an archived opportunity still resolves here, which
+// is what keeps an applicant's history readable after a role is taken down.
+const withPopulate = (query) => populateApplication(query);
+
+// Every value below is escaped: `name` is typed by the applicant, and mail
+// clients render HTML. Unescaped, a name containing markup becomes live markup
+// in the delivered message.
 const getStatusEmail = (application, status) => {
   const opportunity = application.opportunityId;
-  const title = opportunity?.title || 'your application';
-  const company = opportunity?.company || 'the company';
+  const title = escapeHtml(opportunity?.title || 'your application');
+  const company = escapeHtml(opportunity?.company || 'the company');
+  const name = escapeHtml(application.name);
 
   if (status === 'Approved') {
     return {
-      subject: `Application approved - ${title}`,
-      html: `<p>Hi ${application.name},</p>
+      subject: `Application approved - ${opportunity?.title || 'your application'}`,
+      html: `<p>Hi ${name},</p>
              <p>Congratulations! Your application for <strong>${title}</strong> at ${company} has been approved.</p>
              <p>The hiring team will contact you for the next steps.</p>
              <p>Good luck!<br/>- Job Portal</p>`,
@@ -28,8 +42,8 @@ const getStatusEmail = (application, status) => {
 
   if (status === 'Rejected') {
     return {
-      subject: `Application update - ${title}`,
-      html: `<p>Hi ${application.name},</p>
+      subject: `Application update - ${opportunity?.title || 'your application'}`,
+      html: `<p>Hi ${name},</p>
              <p>Thank you for applying for <strong>${title}</strong> at ${company}.</p>
              <p>After review, your application was not selected for this opportunity.</p>
              <p>Please keep exploring more roles on Job Portal.<br/>- Job Portal</p>`,
@@ -53,6 +67,18 @@ const createApplication = asyncHandler(async (req, res) => {
       success: false,
       data: null,
       message: 'Opportunity not found',
+    });
+  }
+
+  // Existence alone is not enough: a draft, closed, or archived role must not
+  // take new applications. Previously any id that resolved was accepted, so a
+  // stale tab could submit to a role that had already been taken down.
+  if (opportunity.status !== OPPORTUNITY_PUBLIC_STATUS) {
+    return res.status(409).json({
+      success: false,
+      data: null,
+      code: 'OPPORTUNITY_CLOSED',
+      message: 'This opportunity is no longer accepting applications',
     });
   }
 
@@ -81,8 +107,8 @@ const createApplication = asyncHandler(async (req, res) => {
     await sendEmail({
       to: application.email,
       subject: `Application received - ${opportunity.title}`,
-      html: `<p>Hi ${application.name},</p>
-             <p>We've received your application for <strong>${opportunity.title}</strong> at ${opportunity.company}.</p>
+      html: `<p>Hi ${escapeHtml(application.name)},</p>
+             <p>We've received your application for <strong>${escapeHtml(opportunity.title)}</strong> at ${escapeHtml(opportunity.company)}.</p>
              <p>Good luck!<br/>- Job Portal</p>`,
     });
   } catch (err) {
@@ -96,9 +122,9 @@ const createApplication = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/applications  (admin) - list all, optional filters.
+// GET /api/applications  (admin) - paginated list, optional filters.
 const getApplications = asyncHandler(async (req, res) => {
-  const { opportunityId, status, domain, company } = req.valid.query;
+  const { opportunityId, status, domain, company, page, limit } = req.valid.query;
   const query = {};
 
   if (opportunityId) query.opportunityId = opportunityId;
@@ -120,24 +146,63 @@ const getApplications = asyncHandler(async (req, res) => {
       : { $in: ids };
   }
 
-  const applications = await populateApplication(Application.find(query)).sort({ createdAt: -1 });
+  const { items, meta } = await paginate(Application, query, {
+    page,
+    limit,
+    decorate: withPopulate,
+  });
 
   res.status(200).json({
     success: true,
-    data: applications,
+    data: items,
+    meta,
     message: 'Applications fetched',
   });
 });
 
-// GET /api/applications/me  (logged-in user) - list current user's applications.
+/**
+ * Counts by status across a user's ENTIRE history, not just one page.
+ *
+ * The dashboard's summary cards used to be derived client-side from the full
+ * array. Now that the endpoint is paginated that array is one page, so counting
+ * it there would report "3 applications" to someone who has thirty. The totals
+ * have to come from the database.
+ */
+async function statusSummaryFor(userId) {
+  const counts = await Application.aggregate([
+    { $match: { userId } },
+    { $group: { _id: { $ifNull: ['$status', 'Pending'] }, count: { $sum: 1 } } },
+  ]);
+
+  const byStatus = APPLICATION_STATUSES.reduce((acc, status) => {
+    acc[status] = counts.find((item) => item._id === status)?.count || 0;
+    return acc;
+  }, {});
+
+  return {
+    total: Object.values(byStatus).reduce((sum, count) => sum + count, 0),
+    byStatus,
+  };
+}
+
+// GET /api/applications/me  (logged-in user) - the caller's own applications.
 const getMyApplications = asyncHandler(async (req, res) => {
-  const applications = await populateApplication(
-    Application.find({ userId: req.user._id })
-  ).sort({ createdAt: -1 });
+  const { page, limit } = req.valid.query;
+
+  const [{ items, meta }, summary] = await Promise.all([
+    paginate(
+      Application,
+      { userId: req.user._id },
+      { page, limit, decorate: withPopulate }
+    ),
+    statusSummaryFor(req.user._id),
+  ]);
 
   res.status(200).json({
     success: true,
-    data: applications,
+    data: items,
+    meta,
+    summary,
     message: 'Your applications fetched',
   });
 });

@@ -376,10 +376,25 @@ tr:last-child td { border-bottom: none; }
 .modal-head h2 { font-size: 1.05rem; margin: 0; }
 .resume-modal iframe { width: 100%; flex: 1; border: 0; background: var(--bg); }
 
+/* ============ Pagination ============ */
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: 24px;
+  padding-top: 16px; border-top: 1px solid var(--border);
+}
+.pagination-status { color: var(--text-muted); font-size: 0.88rem; }
+.pagination-controls { display: flex; align-items: center; gap: 10px; }
+.pagination-page {
+  color: var(--text-muted); font-size: 0.88rem; font-weight: 500;
+  min-width: 100px; text-align: center;
+}
+
 @media (max-width: 760px) {
   .admin-filterbar { grid-template-columns: 1fr; }
   .application-card { flex-direction: column; }
   .application-meta { align-items: flex-start; }
   .navbar-inner { height: auto; padding-top: 12px; padding-bottom: 12px; align-items: flex-start; }
   .navbar-links { flex-wrap: wrap; justify-content: flex-end; }
+  .pagination { flex-direction: column; align-items: stretch; }
+  .pagination-controls { justify-content: space-between; }
 }

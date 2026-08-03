@@ -1,0 +1,60 @@
+# Render blueprint for the backend API.
+# Import via Render → New → Blueprint, pointing at this repository.
+#
+# Values marked `sync: false` are NOT stored here — Render prompts for them at
+# deploy time, which is what keeps secrets out of version control.
+services:
+  - type: web
+    name: jobportal-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    # Render restarts the instance if this stops returning 2xx. The endpoint also
+    # checks the Mongo connection, so a database outage is caught rather than
+    # reported as healthy.
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Atlas connection string.
+      - key: MONGO_URI
+        sync: false
+
+      # The deployed frontend origin, comma-separated if there is more than one.
+      # Without this the browser refuses every cross-origin call — set it to the
+      # Vercel URL after the frontend's first deploy.
+      - key: CORS_ORIGINS
+        sync: false
+
+      # Distinct secrets: this is what stops a refresh token being replayed as an
+      # access token. generateValue gives each a long random value on first deploy.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 1m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # Resume uploads. Omit all three and the API refuses file uploads with a
+      # clear message, and applicants supply a resume link instead.
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # Notification email. EMAIL_PASS must be a Gmail app password.
+      # Unset, emails are skipped rather than failing the request.
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false

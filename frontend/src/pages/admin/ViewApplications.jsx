@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import Loader from '../../components/Loader';
+import Pagination from '../../components/Pagination';
 import { useToast } from '../../components/Toast';
 import { LIMITS, optional } from '../../utils/validationRules';
+import { isEmbeddableResume } from '../../utils/resumeUrl';
 
 const statuses = ['All', 'Pending', 'Approved', 'Rejected'];
 // Same cap the backend query schema enforces on ?company=
@@ -22,14 +24,20 @@ export default function ViewApplications() {
   const [filters, setFilters] = useState({ status: 'All', domain: '', company: '' });
   const [companyError, setCompanyError] = useState('');
   const [preview, setPreview] = useState(null);
+  const [meta, setMeta] = useState(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = () => {
+  // useCallback + an explicit dependency list, so the effect below declares
+  // everything it actually reads. `filters.company` is included here even though
+  // it is applied on submit rather than on change — leaving it out of the
+  // closure's dependencies was what tripped the exhaustive-deps warning.
+  const load = useCallback(() => {
     setLoading(true);
     setError('');
 
-    const params = {};
+    const params = { page };
     if (filters.status !== 'All') params.status = filters.status;
     if (filters.domain) params.domain = filters.domain;
     if (filters.company.trim()) params.company = filters.company.trim();
@@ -41,14 +49,39 @@ export default function ViewApplications() {
     ])
       .then(([applicationRes, statsRes, domainRes]) => {
         setApplications(applicationRes.data.data);
+        setMeta(applicationRes.data.meta);
         setStats(statsRes.data.data);
         setDomains(domainRes.data.data);
       })
       .catch(() => setError('Could not load applications.'))
       .finally(() => setLoading(false));
+  }, [page, filters.status, filters.domain, filters.company]);
+
+  // Deliberately NOT depending on `load` itself: the company box updates
+  // `filters.company` on every keystroke, which would rebuild `load` and refetch
+  // per character. The company filter is applied by its Search button instead.
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filters.status, filters.domain]);
+
+  // Changing a filter shrinks the result set, so keep the user off a page that
+  // may no longer exist.
+  const changeFilter = (patch) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+    setPage(1);
   };
 
-  useEffect(load, [filters.status, filters.domain]);
+  // Escape closes the preview. A modal that can only be dismissed by finding its
+  // Close button is a keyboard trap.
+  useEffect(() => {
+    if (!preview) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setPreview(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [preview]);
 
   const fmtDate = (date) => new Date(date).toLocaleDateString();
 
@@ -82,7 +115,12 @@ export default function ViewApplications() {
       return;
     }
     setCompanyError('');
-    load();
+
+    // A new search is a new result set, so it starts from page 1. Either the
+    // page change drives the refetch, or we already are on page 1 and fetch
+    // directly — never both, so two requests can't race and land out of order.
+    if (page !== 1) setPage(1);
+    else load();
   };
 
   return (
@@ -108,14 +146,14 @@ export default function ViewApplications() {
         <select
           value={filters.status}
           aria-label="Filter by status"
-          onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+          onChange={(e) => changeFilter({ status: e.target.value })}
         >
           {statuses.map((status) => <option key={status}>{status}</option>)}
         </select>
         <select
           value={filters.domain}
           aria-label="Filter by domain"
-          onChange={(e) => setFilters((prev) => ({ ...prev, domain: e.target.value }))}
+          onChange={(e) => changeFilter({ domain: e.target.value })}
         >
           <option value="">All domains</option>
           {domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}
@@ -162,6 +200,7 @@ export default function ViewApplications() {
       ) : applications.length === 0 ? (
         <div className="state">No applications match these filters.</div>
       ) : (
+        <>
         <div className="table-wrap">
           <table>
             <thead>
@@ -185,13 +224,34 @@ export default function ViewApplications() {
                       <div className="muted">{application.email}</div>
                       <div className="muted">{application.phone || 'No phone'}</div>
                     </td>
-                    <td>{opportunity ? `${opportunity.title} - ${opportunity.company}` : 'Deleted opportunity'}</td>
+                    <td>
+                      {opportunity ? `${opportunity.title} - ${opportunity.company}` : 'Deleted opportunity'}
+                      {opportunity?.status === 'archived' && (
+                        <div className="muted">archived</div>
+                      )}
+                    </td>
                     <td>{opportunity?.domain || '-'}</td>
                     <td><span className={`badge ${statusClass[application.status || 'Pending'] || ''}`}>{application.status || 'Pending'}</span></td>
                     <td>
-                      {application.resumeLink ? (
-                        <button className="link-button" type="button" onClick={() => setPreview(application)}>View</button>
-                      ) : '-'}
+                      {/* Only files we uploaded can be previewed inline. An
+                          applicant-supplied link opens in its own tab instead —
+                          see utils/resumeUrl.js for why. */}
+                      {!application.resumeLink ? (
+                        '-'
+                      ) : isEmbeddableResume(application.resumeLink) ? (
+                        <button className="link-button" type="button" onClick={() => setPreview(application)}>
+                          Preview
+                        </button>
+                      ) : (
+                        <a
+                          href={application.resumeLink}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="link-button"
+                        >
+                          Open link ↗
+                        </a>
+                      )}
                     </td>
                     <td>{fmtDate(application.createdAt)}</td>
                     <td>
@@ -206,21 +266,45 @@ export default function ViewApplications() {
             </tbody>
           </table>
         </div>
+        <Pagination meta={meta} onPageChange={setPage} label="applications" />
+        </>
       )}
 
       {preview && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="resume-modal">
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resume-modal-title"
+          onClick={() => setPreview(null)}
+        >
+          {/* Stop a click inside the panel from closing it via the backdrop. */}
+          <div className="resume-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <h2>{preview.name}'s resume</h2>
+                <h2 id="resume-modal-title">{preview.name}&apos;s resume</h2>
                 <p className="muted">{preview.opportunityId?.title} - {preview.opportunityId?.company}</p>
               </div>
               <button className="btn btn-outline btn-sm" type="button" onClick={() => setPreview(null)}>Close</button>
             </div>
-            <iframe title="Resume preview" src={preview.resumeLink} />
+            {/* `sandbox` with no allow-scripts: the framed document renders but
+                cannot run JavaScript, navigate the top-level window, or submit
+                forms. Browsers' built-in PDF viewer is unaffected. */}
+            <iframe
+              title="Resume preview"
+              src={preview.resumeLink}
+              sandbox=""
+              referrerPolicy="no-referrer"
+            />
             <div className="modal-foot">
-              <a href={preview.resumeLink} target="_blank" rel="noreferrer" className="btn btn-outline">Open in new tab</a>
+              <a
+                href={preview.resumeLink}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="btn btn-outline"
+              >
+                Open in new tab
+              </a>
             </div>
           </div>
         </div>

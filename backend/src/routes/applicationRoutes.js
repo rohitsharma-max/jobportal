@@ -13,6 +13,7 @@ const { uploadResumeField } = require('../config/cloudinary');
 const {
   createApplicationSchema,
   listApplicationsSchema,
+  listMyApplicationsSchema,
   updateApplicationStatusSchema,
 } = require('../validation/schemas');
 
@@ -26,7 +27,7 @@ router
   .get(protect, adminOnly, validate(listApplicationsSchema), getApplications)
   .post(protect, uploadResumeField, validate(createApplicationSchema), createApplication);
 
-router.get('/me', protect, getMyApplications);
+router.get('/me', protect, validate(listMyApplicationsSchema), getMyApplications);
 router.get('/stats', protect, adminOnly, getApplicationStats);
 router.patch(
   '/:id/status',

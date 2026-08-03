@@ -174,6 +174,39 @@ const list = (label, { maxItems = 12, maxLength = 80 } = {}) =>
       'list.maxLength': `Each ${label.toLowerCase()} entry must be ${maxLength} characters or less`,
     });
 
+/**
+ * `?page=` and `?limit=` for a list endpoint.
+ *
+ * Both are optional with defaults, so a client that sends neither still gets a
+ * bounded first page instead of the whole collection. `max` on the limit is the
+ * part that matters: without it, `?limit=100000` re-opens exactly the problem
+ * pagination was added to close.
+ */
+const pageQuery = ({ defaultLimit, maxLimit }) => ({
+  page: Joi.number()
+    .integer()
+    .min(1)
+    .default(1)
+    .empty('')
+    .label('Page')
+    .messages({
+      'number.base': 'Page must be a number',
+      'number.min': 'Page must be 1 or higher',
+    }),
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(maxLimit)
+    .default(defaultLimit)
+    .empty('')
+    .label('Limit')
+    .messages({
+      'number.base': 'Limit must be a number',
+      'number.min': 'Limit must be 1 or higher',
+      'number.max': `Limit must be ${maxLimit} or less`,
+    }),
+});
+
 module.exports = {
   Joi,
   EMAIL_RE,
@@ -189,4 +222,5 @@ module.exports = {
   url,
   phone,
   list,
+  pageQuery,
 };

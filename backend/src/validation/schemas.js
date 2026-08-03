@@ -18,11 +18,16 @@ const {
   url,
   phone,
   list,
+  pageQuery,
 } = require('./joiTypes');
 const {
   DOMAINS,
   OPPORTUNITY_TYPES,
+  OPPORTUNITY_STATUSES,
   APPLICATION_STATUSES,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MAX_ADMIN_PAGE_SIZE,
 } = require('../config/constants');
 
 /* ────────────────────────── auth ────────────────────────── */
@@ -72,12 +77,23 @@ const opportunityIdSchema = { params: opportunityIdParams };
 const createOpportunitySchema = { body: opportunityBody };
 const updateOpportunitySchema = { params: opportunityIdParams, body: opportunityBody };
 
+// PATCH /:id/status — close or reopen a role without destroying it. `archived`
+// is accepted here too, making DELETE just a shortcut for it.
+const updateOpportunityStatusSchema = {
+  params: opportunityIdParams,
+  body: Joi.object({ status: enumOf('Status', OPPORTUNITY_STATUSES) }),
+};
+
 const listOpportunitiesSchema = {
   query: Joi.object({
     // Capped because the value is fed into a RegExp (escaped first) — a long
     // pattern is both a pointless query and needless load on Mongo.
     search: optionalText('Search term', { max: 100 }),
     domain: enumOf('Domain', DOMAINS, { required: false }),
+    // Honoured for admins only; the controller ignores it for everyone else, so
+    // a public caller cannot list drafts by passing ?status=draft.
+    status: enumOf('Status', OPPORTUNITY_STATUSES, { required: false }),
+    ...pageQuery({ defaultLimit: DEFAULT_PAGE_SIZE, maxLimit: MAX_PAGE_SIZE }),
   }),
 };
 
@@ -112,6 +128,15 @@ const listApplicationsSchema = {
     status: enumOf('Status', APPLICATION_STATUSES, { required: false }),
     domain: enumOf('Domain', DOMAINS, { required: false }),
     company: optionalText('Company search', { max: 100 }),
+    ...pageQuery({ defaultLimit: 20, maxLimit: MAX_ADMIN_PAGE_SIZE }),
+  }),
+};
+
+// GET /applications/me — the caller's own history. Paginated like every other
+// list; these are usually short, hence the larger default page.
+const listMyApplicationsSchema = {
+  query: Joi.object({
+    ...pageQuery({ defaultLimit: 20, maxLimit: MAX_ADMIN_PAGE_SIZE }),
   }),
 };
 
@@ -126,9 +151,11 @@ module.exports = {
   refreshSchema,
   createOpportunitySchema,
   updateOpportunitySchema,
+  updateOpportunityStatusSchema,
   opportunityIdSchema,
   listOpportunitiesSchema,
   createApplicationSchema,
   listApplicationsSchema,
+  listMyApplicationsSchema,
   updateApplicationStatusSchema,
 };

@@ -10,7 +10,16 @@
 // The two are signed with different secrets and carry a `type` claim, and the
 // verify helpers below enforce that claim. That means a refresh token can never
 // be replayed as an access token to reach a protected route, and vice versa.
+//
+// Both also carry `sid` — the session (family) id from services/sessions.js.
+// It is what lets logout end ONE device's session instead of every session on
+// the account, and what ties an access token back to the refresh-token chain
+// that produced it.
+//
+// This module is deliberately free of database access: it signs and verifies,
+// nothing more. Recording and revoking sessions lives in services/sessions.js.
 
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const accessSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
@@ -20,27 +29,43 @@ const refreshSecret = () =>
 const accessTtl = () => process.env.JWT_ACCESS_EXPIRES_IN || '1m';
 const refreshTtl = () => process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
-function signAccessToken(user) {
-  return jwt.sign({ id: String(user._id), type: 'access' }, accessSecret(), {
+function signAccessToken(user, sid) {
+  return jwt.sign({ id: String(user._id), sid, type: 'access' }, accessSecret(), {
     expiresIn: accessTtl(),
   });
 }
 
-function signRefreshToken(user) {
+function signRefreshToken(user, sid) {
   return jwt.sign(
-    { id: String(user._id), type: 'refresh', tokenVersion: user.tokenVersion || 0 },
+    {
+      id: String(user._id),
+      sid,
+      type: 'refresh',
+      tokenVersion: user.tokenVersion || 0,
+      // Unique per token, and load-bearing rather than decorative.
+      //
+      // `iat` has one-second granularity, so without a jti two refresh tokens
+      // minted for the same session inside the same second are byte-for-byte
+      // identical. Rotation would then return the caller's own token back to
+      // them, and the sha256 of it would collide with the row already stored —
+      // so the rotation would fail on a duplicate-key error instead.
+      jti: crypto.randomUUID(),
+    },
     refreshSecret(),
     { expiresIn: refreshTtl() }
   );
 }
 
-// Both tokens a client needs after a successful login / register / refresh.
-function issueTokens(user) {
-  return {
-    accessToken: signAccessToken(user),
-    refreshToken: signRefreshToken(user),
-    accessTokenExpiresIn: accessTtl(),
-  };
+/**
+ * The token's own expiry as a Date, read back off the signed payload.
+ *
+ * Taken from the JWT rather than recomputed from JWT_REFRESH_EXPIRES_IN so the
+ * stored row and the token can never disagree — whatever format that env var is
+ * written in, `exp` is the single authority.
+ */
+function expiresAtOf(token) {
+  const { exp } = jwt.decode(token);
+  return new Date(exp * 1000);
 }
 
 function verifyTyped(token, secret, expectedType) {
@@ -58,9 +83,11 @@ const verifyAccessToken = (token) => verifyTyped(token, accessSecret(), 'access'
 const verifyRefreshToken = (token) => verifyTyped(token, refreshSecret(), 'refresh');
 
 module.exports = {
+  accessTtl,
+  refreshTtl,
   signAccessToken,
   signRefreshToken,
-  issueTokens,
+  expiresAtOf,
   verifyAccessToken,
   verifyRefreshToken,
 };

@@ -59,4 +59,13 @@ const applicationSchema = new mongoose.Schema(
 // one fails with duplicate-key error 11000, which the controller turns into 409.
 applicationSchema.index({ userId: 1, opportunityId: 1 }, { unique: true });
 
+// Supporting indexes for the three list queries, each ending in `createdAt: -1`
+// so the newest-first sort is served by the index rather than sorted in memory:
+//   /applications?opportunityId=  — applicants for one role
+//   /applications/me              — the caller's own history
+//   /applications?status=         — the admin review queue
+applicationSchema.index({ opportunityId: 1, createdAt: -1 });
+applicationSchema.index({ userId: 1, createdAt: -1 });
+applicationSchema.index({ status: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Application', applicationSchema);
