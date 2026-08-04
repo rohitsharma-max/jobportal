@@ -62,7 +62,7 @@ export default function CustomerDashboard() {
           <h1>My Applications</h1>
           <p className="muted page-subtitle">Track every job and internship you applied for.</p>
         </div>
-        <Link to="/" className="btn btn-primary">Browse opportunities</Link>
+        <Link to="/opportunities" className="btn btn-primary">Browse opportunities</Link>
       </div>
 
       {loading ? (

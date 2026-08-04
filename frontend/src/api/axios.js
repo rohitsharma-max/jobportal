@@ -7,20 +7,32 @@ import {
   hasSession,
   emitLogout,
 } from './tokenStore';
+import { isRefreshTokenDead } from './refreshPolicy';
 
 // One central Axios instance. Every API call imports this.
 // baseURL comes from the env file so we never hardcode localhost in components.
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const api = axios.create({ baseURL });
+// 20s: comfortably over a Render free-plan cold start, well under a user's
+// patience. Without any timeout a hung request never settles at all.
+const TIMEOUT_MS = 20_000;
+
+const api = axios.create({ baseURL, timeout: TIMEOUT_MS });
 
 // Bare client used ONLY for the refresh call. It deliberately has no
 // interceptors — otherwise a failing refresh would try to refresh itself.
-const refreshClient = axios.create({ baseURL });
+const refreshClient = axios.create({ baseURL, timeout: TIMEOUT_MS });
 
 // Endpoints that establish a session. A 401 from these is a normal credential
 // failure, not an expired session, so it must not trigger refresh-or-logout.
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const AUTH_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/verify-email',
+  '/auth/resend-otp',
+  '/auth/google',
+];
 const isAuthEndpoint = (url = '') => AUTH_ENDPOINTS.some((path) => url.includes(path));
 
 // Attach the access token (if present) to every request.
@@ -57,10 +69,14 @@ function runRefresh() {
       return data.accessToken;
     })
     .catch((err) => {
-      // Refresh token expired, revoked (logout elsewhere), or the account is
-      // gone — nothing left to recover, so end the session.
-      clearTokens();
-      emitLogout('expired');
+      // Only a server that has actually rejected the refresh token ends the
+      // session. A network failure, timeout, 429 or 5xx leaves the tokens in
+      // place so the next request can try again — clearing them here is what
+      // used to log people out a minute after signing in.
+      if (isRefreshTokenDead(err)) {
+        clearTokens();
+        emitLogout('expired');
+      }
       throw err;
     })
     .finally(() => {
@@ -91,7 +107,10 @@ api.interceptors.response.use(
         config.headers = { ...config.headers, Authorization: `Bearer ${accessToken}` };
         return await api(config);
       } catch {
-        // runRefresh already cleared tokens and emitted the logout.
+        // runRefresh has already decided whether the session is over —
+        // tokens are cleared and the logout emitted only if the refresh
+        // token itself was dead. Either way this request can't succeed on
+        // its own, so surface the original error.
         return Promise.reject(error);
       }
     }

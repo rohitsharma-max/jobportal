@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
 import OpportunityDetailsPage from './pages/OpportunityDetailsPage';
 import ApplyPage from './pages/ApplyPage';
@@ -9,6 +10,7 @@ import ConfirmationPage from './pages/ConfirmationPage';
 import CustomerDashboard from './pages/CustomerDashboard';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AddOpportunity from './pages/admin/AddOpportunity';
 import EditOpportunity from './pages/admin/EditOpportunity';
@@ -20,10 +22,10 @@ export default function App() {
     <Routes>
       <Route element={<MainLayout />}>
         {/* Public */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/opportunities/:id" element={<OpportunityDetailsPage />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/confirmation" element={<ConfirmationPage />} />
 
         {/* Logged-in users only */}
@@ -32,6 +34,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/opportunities"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/opportunities/:id"
+          element={
+            <ProtectedRoute>
+              <OpportunityDetailsPage />
             </ProtectedRoute>
           }
         />

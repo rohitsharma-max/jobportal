@@ -34,4 +34,15 @@ const refreshLimiter = rateLimit({
   handler: json('Too many refresh attempts. Please log in again.'),
 });
 
-module.exports = { authLimiter, refreshLimiter };
+// OTP verify/resend. The real guards are the per-account attempt counter and the
+// resend cooldown; this is the outer bound on hammering from one address.
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipInTests,
+  handler: json('Too many verification attempts. Please try again later.'),
+});
+
+module.exports = { authLimiter, refreshLimiter, otpLimiter };

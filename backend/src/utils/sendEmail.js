@@ -35,3 +35,6 @@ async function sendEmail({ to, subject, html }) {
 }
 
 module.exports = sendEmail;
+// Callers need to distinguish "mail sent" from "mail silently skipped". Once an
+// OTP gates registration, a silent skip means nobody can ever sign up.
+module.exports.isEmailConfigured = isConfigured;

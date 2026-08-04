@@ -44,7 +44,7 @@ export default function OpportunityDetailsPage() {
       <div className="center-narrow">
         <div className="big-icon">🔍</div>
         <h2>{error}</h2>
-        <Link to="/" className="btn btn-primary">
+        <Link to="/opportunities" className="btn btn-primary">
           Back to opportunities
         </Link>
       </div>
@@ -53,7 +53,7 @@ export default function OpportunityDetailsPage() {
 
   return (
     <>
-      <Link to="/" className="back-link">
+      <Link to="/opportunities" className="back-link">
         ← Back to opportunities
       </Link>
 

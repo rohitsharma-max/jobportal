@@ -1,4 +1,16 @@
 /* ============ Design tokens ============ */
+/*
+ * Light is the default (:root), dark is an override. Two dark blocks on
+ * purpose, not one:
+ *   1. @media (prefers-color-scheme: dark) — follows the OS, but only while
+ *      the visitor hasn't picked a theme explicitly.
+ *   2. :root[data-theme='dark'] — an explicit choice, which must win over
+ *      the OS in *either* direction (dark OS + "light" chosen, or light OS +
+ *      "dark" chosen).
+ * The :not([data-theme='light']) guard on block 1 is what lets a "light"
+ * choice override a dark OS — collapsing the two blocks into one would lose
+ * that case, so don't.
+ */
 :root {
   --bg: #f6f7fb;
   --surface: #ffffff;
@@ -8,16 +20,120 @@
   --primary: #4f46e5;
   --primary-dark: #4338ca;
   --primary-bg: #eef2ff;
-  --success: #059669;
+  /* Darkened from the original #059669/#dc2626/#2563eb: those measured
+     3.58:1 / 4.41:1 / 4.24:1 against their own -bg tints below — all three
+     failed AA on the status badges (Pending/Approved/Rejected), the most
+     load-bearing text in this app. Pre-existing, not a dark-mode artifact;
+     fixed here since the tints stay put (used too widely to touch) and the
+     ink was the smallest lever that clears 4.5:1 without changing the hue. */
+  --success: #047857;
   --success-bg: #ecfdf5;
-  --danger: #dc2626;
+  --success-border: #a7f3d0;
+  --danger: #c81e1e;
+  --danger-dark: #b91c1c;
   --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --warning: #b45309;
   --warning-bg: #fffbeb;
+  --info: #1d4ed8;
+  --info-bg: #dbeafe;
+  --info-border: #bfdbfe;
+  --toast-danger-bg: #fef2f2e8;
+  --toast-success-bg: #ecfdf5e8;
+  --toast-info-bg: #eff6ffe8;
+  /* Ink for text/icons painted on a filled --primary/--danger surface (not on
+     a -bg tint — that's --primary/--danger/--success themselves). Split out
+     because in dark mode the fill lightens (see below) and a light fill
+     needs dark ink, not white — one token can't be both. */
+  --on-accent: #ffffff;
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.16);
   --sans: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Native form controls / scrollbars should render as light chrome to match. */
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    /* Surface lighter than bg — elevation reads as "lighter" in dark UI,
+       the inverse of light mode where cards are white on grey. */
+    --bg: #12141a;
+    --surface: #1e2129;
+    --border: #2e323c;
+    /* Off-white on near-black, not pure #fff on #000 — pure values vibrate. */
+    --text: #e9eaef;
+    --text-muted: #9aa0b4;
+    /* #4f46e5 measures ~2.9:1 on this bg — lifted to indigo-400 so it's
+       readable as text/links, still unmistakably the same brand hue. */
+    --primary: #818cf8;
+    /* Hover/emphasis must read as RAISED in a dark UI, i.e. lighter, not
+       darker like in light mode — #6366f1 (darker than --primary) had this
+       backwards, and no ink passed AA on it either. #a5b4fc is lighter than
+       --primary and every ink check below passes on it. */
+    --primary-dark: #a5b4fc;
+    --primary-bg: #211f3a;
+    --success: #10b981;
+    --success-bg: #0e2a1f;
+    --success-border: #1f4a3a;
+    --danger: #f87171;
+    /* Same lighten-on-hover fix as --primary-dark. */
+    --danger-dark: #fca5a5;
+    --danger-bg: #2a1616;
+    --danger-border: #5b2323;
+    --warning: #fbbf24;
+    --warning-bg: #2a1f0c;
+    --info: #60a5fa;
+    --info-bg: #14233d;
+    --info-border: #1e3a5f;
+    --toast-danger-bg: rgba(42, 22, 22, 0.88);
+    --toast-success-bg: rgba(14, 42, 31, 0.88);
+    --toast-info-bg: rgba(20, 35, 61, 0.88);
+    /* Black shadows disappear on a dark bg, so these lean on solid black at
+       much higher opacity instead of the light mode's soft slate tint —
+       separation still comes mainly from --border, shadow is a supplement. */
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+    /* Dark ink for --on-accent: a light fill (the lifted --primary/--danger
+       above) needs dark text on top, not white — #fff on #818cf8 is only
+       2.98:1. #141625 clears AA on every filled surface that uses it. */
+    --on-accent: #141625;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #12141a;
+  --surface: #1e2129;
+  --border: #2e323c;
+  --text: #e9eaef;
+  --text-muted: #9aa0b4;
+  --primary: #818cf8;
+  --primary-dark: #a5b4fc;
+  --primary-bg: #211f3a;
+  --success: #10b981;
+  --success-bg: #0e2a1f;
+  --success-border: #1f4a3a;
+  --danger: #f87171;
+  --danger-dark: #fca5a5;
+  --danger-bg: #2a1616;
+  --danger-border: #5b2323;
+  --warning: #fbbf24;
+  --warning-bg: #2a1f0c;
+  --info: #60a5fa;
+  --info-bg: #14233d;
+  --info-border: #1e3a5f;
+  --toast-danger-bg: rgba(42, 22, 22, 0.88);
+  --toast-success-bg: rgba(14, 42, 31, 0.88);
+  --toast-info-bg: rgba(20, 35, 61, 0.88);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --on-accent: #141625;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -52,13 +168,16 @@ h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
   padding: 8px 14px; border-radius: var(--radius-sm); color: var(--text-muted); font-weight: 500; font-size: 0.95rem;
 }
 .navbar-links a:hover { background: var(--bg); color: var(--text); }
-.navbar-links a.active { color: var(--primary); background: var(--primary-bg); }
-
-/* ============ Footer ============ */
-.footer {
-  background: var(--surface); border-top: 1px solid var(--border);
-  padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 0.9rem;
+/* Icon-only, muted by default so it doesn't compete with the adjacent
+   Login/Register buttons and nav links — it only needs to be findable. */
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; border: none; background: transparent;
+  border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;
+  font-size: 1rem; line-height: 1; flex-shrink: 0;
 }
+.theme-toggle:hover { background: var(--bg); color: var(--text); }
+.navbar-links a.active { color: var(--primary); background: var(--primary-bg); }
 
 /* ============ Buttons ============ */
 .btn {
@@ -68,12 +187,17 @@ h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
   font-family: inherit;
 }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-primary { background: var(--primary); color: #fff; }
+/* var(--on-accent), not a hardcoded color: these buttons stay filled with a
+   saturated accent hue in both themes, but the fill's lightness inverts
+   between themes (light-mode fill is dark, dark-mode fill is lifted light —
+   see --primary/--danger in the token block), so the ink has to invert too.
+   #fff on the dark-mode fill is only 2.98:1 — --on-accent covers both. */
+.btn-primary { background: var(--primary); color: var(--on-accent); }
 .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
 .btn-outline { background: var(--surface); border-color: var(--border); color: var(--text); }
 .btn-outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover:not(:disabled) { background: #b91c1c; }
+.btn-danger { background: var(--danger); color: var(--on-accent); }
+.btn-danger:hover:not(:disabled) { background: var(--danger-dark); }
 .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
 .btn-block { width: 100%; }
 
@@ -156,13 +280,13 @@ textarea.field-invalid {
 /* Password strength */
 .password-strength { display: flex; gap: 4px; height: 4px; margin-top: 2px; }
 .password-strength .str-bar { flex: 1; border-radius: 2px; background: var(--border); transition: background 0.3s; }
-.password-strength .str-bar.active-weak   { background: #ef4444; }
-.password-strength .str-bar.active-medium { background: #f59e0b; }
-.password-strength .str-bar.active-strong { background: #10b981; }
+.password-strength .str-bar.active-weak   { background: var(--danger); }
+.password-strength .str-bar.active-medium { background: var(--warning); }
+.password-strength .str-bar.active-strong { background: var(--success); }
 .str-label { font-size: 0.78rem; margin-top: 2px; }
-.str-label.str-weak   { color: #ef4444; }
-.str-label.str-medium { color: #f59e0b; }
-.str-label.str-strong { color: #10b981; }
+.str-label.str-weak   { color: var(--danger); }
+.str-label.str-medium { color: var(--warning); }
+.str-label.str-strong { color: var(--success); }
 
 /* File info */
 .file-info { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
@@ -179,22 +303,22 @@ textarea.field-invalid {
   pointer-events: auto;
   display: flex; align-items: center; gap: 10px;
   padding: 14px 16px; border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.16);
+  box-shadow: var(--shadow-lg);
   font-size: 0.9rem; font-weight: 500;
   animation: toastSlideIn 0.35s ease-out;
   backdrop-filter: blur(8px);
 }
 .toast-leave { animation: toastSlideOut 0.3s ease-in forwards; }
-.toast-error   { background: #fef2f2e8; color: var(--danger);  border: 1px solid #fecaca; }
-.toast-success { background: #ecfdf5e8; color: var(--success); border: 1px solid #a7f3d0; }
-.toast-info    { background: #eff6ffe8; color: #2563eb;        border: 1px solid #bfdbfe; }
+.toast-error   { background: var(--toast-danger-bg);  color: var(--danger);  border: 1px solid var(--danger-border); }
+.toast-success { background: var(--toast-success-bg); color: var(--success); border: 1px solid var(--success-border); }
+.toast-info    { background: var(--toast-info-bg);    color: var(--info);    border: 1px solid var(--info-border); }
 .toast-icon {
   display: flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
 }
 .toast-error  .toast-icon { background: var(--danger-bg); }
 .toast-success .toast-icon { background: var(--success-bg); }
-.toast-info   .toast-icon { background: #dbeafe; }
+.toast-info   .toast-icon { background: var(--info-bg); }
 .toast-msg { flex: 1; line-height: 1.35; }
 .toast-close {
   background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 2px;
@@ -222,8 +346,8 @@ textarea.field-invalid {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .alert { padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 0.92rem; }
-.alert-error { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
-.alert-success { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; }
+.alert-error { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+.alert-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
 
 /* ============ Details page ============ */
 .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -274,7 +398,7 @@ tr:last-child td { border-bottom: none; }
 .stat-card strong { font-size: 1.8rem; line-height: 1; }
 .badge-success { background: var(--success-bg); color: var(--success); }
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
-.badge-warning { background: var(--warning-bg); color: #b45309; }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
 .application-list { display: grid; gap: 14px; }
 .application-card {
   display: flex;
@@ -347,6 +471,9 @@ tr:last-child td { border-bottom: none; }
   position: fixed;
   inset: 0;
   z-index: 50;
+  /* Theme-independent: this scrim's job is to dim whatever's underneath, in
+     either theme, so it stays a fixed dark slate rather than following
+     --bg/--text (which would make it near-invisible in dark mode). */
   background: rgba(15, 23, 42, 0.62);
   display: flex;
   align-items: center;
@@ -397,4 +524,259 @@ tr:last-child td { border-bottom: none; }
   .navbar-links { flex-wrap: wrap; justify-content: flex-end; }
   .pagination { flex-direction: column; align-items: stretch; }
   .pagination-controls { justify-content: space-between; }
+}
+
+/* "or" separator between the credential form and the Google button. */
+.divider-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 16px;
+  /* The var() fallback hex here used to duplicate --text-muted's light value
+     outside :root; --text-muted is always defined now (light and dark), so
+     the fallback was dead weight that could only drift from the real token. */
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+.divider-or::before,
+.divider-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}
+.btn-link:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  text-decoration: none;
+}
+
+/* ============ Landing page ============ */
+/* Everything below is scoped under .landing so it can never collide with the
+   generic class names above (.card, .state, .section-like selectors, etc.)
+   and so none of the rules above had to be touched. */
+
+.landing {
+  /* The hero below breaks out to full viewport width via negative margins.
+     That trick can leave a hair of extra width when a vertical scrollbar is
+     present (100vw includes it, the visible page doesn't) — clip it here
+     rather than let the page grow a horizontal scrollbar over a few pixels. */
+  overflow-x: hidden;
+}
+
+.landing-section {
+  padding: 48px 0;
+}
+
+/* ---- Eyebrow / heading scale (design doc: scale and weight carry the
+   personality, not a new font — --sans stays the only family in play) ---- */
+.landing-eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--primary);
+}
+.landing-h1 {
+  margin: 0 0 16px;
+  font-size: clamp(2.25rem, 5.5vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.landing-h2 {
+  margin: 0 0 24px;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.landing-lede {
+  margin: 0 0 28px;
+  font-size: 1.125rem;
+  color: var(--text-muted);
+  max-width: 46ch;
+}
+
+/* ---- Hero ---- */
+.landing-hero {
+  background: var(--primary-bg);
+  /* Full-bleed wash escaping MainLayout's centred .container: the classic
+     "negative half-viewport" breakout, safe against the container's own
+     centring (unlike a bare 100vw + -50vw, which assumes the container fills
+     the viewport). */
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  padding: 64px 20px 56px;
+  text-align: center;
+}
+.landing-hero-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.landing-cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 48px;
+}
+
+/* ---- Signature element: the application track ---- */
+.landing-track {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+.landing-track-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.landing-track-connector {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  font-weight: 700;
+  align-self: center;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.landing-track-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 168px;
+  /* Visible by default: the entrance animation only ever gets layered on top
+     of this under prefers-reduced-motion: no-preference below. Anyone with
+     reduced motion (or a browser that never matches that query) just sees
+     the chip fully rendered from the first frame — no invisible state that
+     depends on an animation actually completing. */
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-track-item {
+    opacity: 0;
+    animation: landing-rise 0.4s ease-out forwards;
+  }
+}
+@keyframes landing-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.landing-track-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 12px;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+.landing-track-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.landing-track-label {
+  font-size: 0.95rem;
+}
+.landing-track-outcomes {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+/* Same tints the admin approve/reject screen and the applicant dashboard
+   already use for these exact statuses (see .badge-primary / .badge-warning
+   / .badge-success in the Badges section above) — reused, not reinvented, so
+   a visitor sees the app's real status vocabulary before signing up. */
+.landing-track-stage-apply { background: var(--primary-bg); color: var(--primary-dark); }
+.landing-track-stage-review { background: var(--warning-bg); color: var(--warning); }
+.landing-track-stage-decision { background: var(--success-bg); color: var(--success); }
+.landing-track-caption {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ---- Domains ---- */
+.landing-domains {
+  text-align: center;
+}
+.landing-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* ---- What you can do here ---- */
+.landing-cards {
+  text-align: center;
+}
+.landing-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  text-align: left;
+}
+.landing-do-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.landing-do-card p {
+  margin: 0;
+}
+
+/* ---- Closing CTA ---- */
+.landing-closing {
+  text-align: center;
+}
+.landing-closing-lede {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 640px) {
+  .landing-track {
+    flex-direction: column;
+    align-items: center;
+  }
+  .landing-track-step {
+    flex-direction: column;
+    width: 100%;
+    max-width: 240px;
+  }
+  .landing-track-connector {
+    transform: rotate(90deg);
+    margin: 2px 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .landing-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
 }

@@ -10,7 +10,7 @@ export default function ConfirmationPage() {
       </p>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
         <Link to="/dashboard" className="btn btn-primary">Track status</Link>
-        <Link to="/" className="btn btn-outline">Browse more</Link>
+        <Link to="/opportunities" className="btn btn-outline">Browse more</Link>
       </div>
     </div>
   );

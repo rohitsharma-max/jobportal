@@ -22,9 +22,25 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
-const accessSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
-const refreshSecret = () =>
-  process.env.JWT_REFRESH_SECRET || `${process.env.JWT_SECRET}:refresh`;
+// The `:refresh` derivation is deliberate — it is what keeps the access and
+// refresh secrets DIFFERENT when only JWT_SECRET is configured, which is the
+// common case. The bug it used to carry was running even when JWT_SECRET was
+// undefined, yielding the guessable literal "undefined:refresh". Hence the guard
+// rather than the removal. config/env.js catches this at boot; these throws are
+// the backstop for anything that reaches here anyway (a test, a script).
+const accessSecret = () => {
+  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('No access token secret: set JWT_ACCESS_SECRET or JWT_SECRET');
+  }
+  return secret;
+};
+
+const refreshSecret = () => {
+  if (process.env.JWT_REFRESH_SECRET) return process.env.JWT_REFRESH_SECRET;
+  if (process.env.JWT_SECRET) return `${process.env.JWT_SECRET}:refresh`;
+  throw new Error('No refresh token secret: set JWT_REFRESH_SECRET or JWT_SECRET');
+};
 
 const accessTtl = () => process.env.JWT_ACCESS_EXPIRES_IN || '1m';
 const refreshTtl = () => process.env.JWT_REFRESH_EXPIRES_IN || '7d';

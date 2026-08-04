@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import useFormValidation from '../hooks/useFormValidation';
 import FormField, { fieldProps } from '../components/FormField';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import {
   nameRule,
   emailRule,
@@ -68,10 +69,38 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     try {
-      await register(form.name.trim(), form.email.trim(), form.password);
-      toast('Account created successfully!', 'success');
-      navigate('/', { replace: true });
+      // register() no longer opens a session — it mails a code. The session
+      // starts on the verify page.
+      const data = await register(form.name.trim(), form.email.trim(), form.password);
+      toast('Check your email for a 6-digit code', 'success');
+      navigate('/verify-email', {
+        replace: true,
+        // codeJustSent is the explicit "a code was truly just mailed" signal the
+        // verify page uses to seed its resend cooldown — see LoginPage's
+        // EMAIL_NOT_VERIFIED redirect for the case where it must NOT be set.
+        state: { email: form.email.trim().toLowerCase(), devOtp: data?.devOtp, codeJustSent: true },
+      });
     } catch (err) {
+      // A code is already out there for this address — either the plain 60s
+      // resend cooldown (OTP_COOLDOWN) or the register endpoint refusing to
+      // overwrite a still-live pending signup with a fresh name/password
+      // (OTP_ALREADY_SENT — see authController's register handler for why
+      // that refusal exists). Either way, showing "please wait Ns" as a form
+      // error here is a dead end: there is no way from this page to reach the
+      // code that's already waiting in the inbox. Send them to the page that
+      // can actually use it, mirroring LoginPage's EMAIL_NOT_VERIFIED redirect.
+      const code = err?.response?.data?.code;
+      if (code === 'OTP_COOLDOWN' || code === 'OTP_ALREADY_SENT') {
+        toast('A verification code was already sent to this address', 'info');
+        navigate('/verify-email', {
+          replace: true,
+          // Deliberately no `codeJustSent`: no code was mailed by THIS
+          // request, so the resend countdown must not start at 60 — same
+          // reasoning as LoginPage's EMAIL_NOT_VERIFIED redirect.
+          state: { email: form.email.trim().toLowerCase() },
+        });
+        return;
+      }
       // A duplicate email comes back as errors.email and highlights that input.
       const msg = applyServerErrors(err, setFieldError, ['name', 'email', 'password']);
       setServerError(msg);
@@ -152,6 +181,7 @@ export default function RegisterPage() {
           {submitting ? 'Creating…' : 'Register'}
         </button>
       </form>
+      <GoogleSignInButton />
       <p className="muted" style={{ marginTop: 16, textAlign: 'center' }}>
         Already have an account? <Link to="/login" className="back-link" style={{ margin: 0 }}>Log in</Link>
       </p>

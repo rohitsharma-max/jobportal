@@ -5,6 +5,33 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Internship &amp; Job Listing Portal</title>
+    <!--
+      Sets data-theme on <html> before anything paints. The dark-mode CSS in
+      index.css already follows the OS via @media(prefers-color-scheme) with
+      no JS at all — this script only exists for the case where the user has
+      explicitly overridden that. If we waited and applied that override from
+      a React effect after mount, a dark-mode user with light chosen (or vice
+      versa) would see one frame rendered in the wrong theme before React
+      catches up — a visible flash on every load. Inline + blocking is the
+      only way to run before paint, so don't "tidy" this into a component or
+      move it to main.jsx; either change reintroduces the flash.
+
+      Key name 'theme' must match THEME_KEY in src/api/themeStore.js — this
+      script runs before that module is even fetched, so it can't import the
+      constant. Keep the literal below and THEME_KEY there in sync by hand.
+    -->
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('theme');
+          if (theme === 'light' || theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', theme);
+          }
+        } catch (e) {
+          /* localStorage can throw in locked-down contexts (private mode, etc.) — fall back to the OS theme via CSS. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

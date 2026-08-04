@@ -43,6 +43,15 @@ services:
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
 
+      # Pepper for email-verification OTP hashes. Generated once; rotating it
+      # invalidates only in-flight codes (10 minutes' worth).
+      - key: OTP_SECRET
+        generateValue: true
+
+      # Google OAuth Web client ID. Unset, POST /api/auth/google answers 503.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
       # Resume uploads. Omit all three and the API refuses file uploads with a
       # clear message, and applicants supply a resume link instead.
       - key: CLOUDINARY_CLOUD_NAME
@@ -52,8 +61,9 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
 
-      # Notification email. EMAIL_PASS must be a Gmail app password.
-      # Unset, emails are skipped rather than failing the request.
+      # Notification email AND registration verification codes. EMAIL_PASS must be
+      # a Gmail app password. REQUIRED: with NODE_ENV=production and these unset,
+      # registration fails with 503 because no code can be delivered.
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS

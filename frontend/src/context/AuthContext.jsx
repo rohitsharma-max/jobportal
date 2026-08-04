@@ -69,16 +69,45 @@ export function AuthProvider({ children }) {
     return res.data.data.user;
   }, []);
 
+  // Creates an UNVERIFIED account and triggers the OTP email. Deliberately does
+  // NOT persist anything: there is no session until the code is verified, and
+  // pretending otherwise is what produces a 401 on the very next request.
   const register = useCallback(async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
+    return res.data.data; // { email, requiresVerification, devOtp? }
+  }, []);
+
+  // Completing OTP verification is what actually opens the session — register
+  // no longer returns tokens. Goes through persist() like every other path, so
+  // the tokens reach localStorage and the next request carries them. Skipping
+  // that is what produces a "401 NO_TOKEN" immediately after signing up.
+  const verifyEmail = useCallback(async (email, otp) => {
+    const res = await api.post('/auth/verify-email', { email, otp });
+    persist(res.data.data);
+    return res.data.data.user;
+  }, []);
+
+  // No session involved — just asks for a replacement code. Returns the payload
+  // so the caller can read `devOtp` when the server has no mail configured.
+  const resendOtp = useCallback(async (email) => {
+    const res = await api.post('/auth/resend-otp', { email });
+    return res.data.data;
+  }, []);
+
+  // `idToken` is the credential Google Identity Services hands us. The server
+  // verifies it and returns OUR normal token pair, so nothing downstream needs
+  // to know this session began with Google.
+  const googleLogin = useCallback(async (idToken) => {
+    const res = await api.post('/auth/google', { idToken });
     persist(res.data.data);
     return res.data.data.user;
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      // Retires every refresh token for this account server-side. Best effort —
-      // the local session is cleared either way.
+      // Ends THIS session server-side only — the controller revokes the calling
+      // device's refresh-token family, so other devices stay signed in. Best
+      // effort: the local session is cleared either way.
       await api.post('/auth/logout');
     } catch {
       // Already expired or offline; nothing to do.
@@ -88,7 +117,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, verifyEmail, resendOtp, googleLogin, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

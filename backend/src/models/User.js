@@ -35,8 +35,52 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    /**
+     * Whether the address has been proven to belong to this person.
+     *
+     * Defaults to TRUE on purpose. Existing documents — including the admin
+     * created by `npm run seed` — carry no such field, and Mongoose applies this
+     * default when they are read, so they stay able to log in. New registrations
+     * pass `emailVerified: false` EXPLICITLY. Flipping this default to false
+     * would lock every existing account out of the system on deploy.
+     */
+    emailVerified: {
+      type: Boolean,
+      default: true,
+    },
+    // OTP state. select:false for the same reason as `password`: these are
+    // credentials, and no handler that returns a user should be able to leak them.
+    emailOtpHash: { type: String, default: null, select: false },
+    emailOtpExpiresAt: { type: Date, default: null, select: false },
+    // Drives the resend cooldown, which is also what stops register-spam from
+    // being used to mail-bomb an address.
+    emailOtpRequestedAt: { type: Date, default: null, select: false },
+    // Wrong guesses against the current code. Burns the code at OTP_MAX_ATTEMPTS.
+    emailOtpAttempts: { type: Number, default: 0, select: false },
+
+    // --- Google identity ---
+    //
+    // No `default` on purpose. With `default: null` every password-only user
+    // would carry googleId: null, and a unique index counts explicit nulls — the
+    // second such user would collide. Left absent instead, and the index below
+    // is partial rather than sparse (sparse skips MISSING fields but still
+    // indexes nulls, so it would not save us either).
+    googleId: { type: String },
+    authProvider: {
+      type: String,
+      enum: ['email', 'google', 'both'],
+      default: 'email',
+    },
+    avatarUrl: { type: String, default: null },
   },
   { timestamps: true }
+);
+
+// Unique only over documents that actually have a googleId string.
+userSchema.index(
+  { googleId: 1 },
+  { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } }
 );
 
 // Hash the password before saving (only when it changed).
@@ -47,7 +91,10 @@ userSchema.pre('save', async function () {
 });
 
 // Instance helper to compare a plaintext password with the stored hash.
+// A Google-only account has no password. bcrypt.compare(x, undefined) throws,
+// which would turn an ordinary failed login into a 500 — so answer false.
 userSchema.methods.matchPassword = function (entered) {
+  if (!this.password) return Promise.resolve(false);
   return bcrypt.compare(entered, this.password);
 };
 

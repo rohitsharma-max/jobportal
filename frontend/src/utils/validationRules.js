@@ -30,6 +30,7 @@ export const LIMITS = {
   requirements: { maxItems: 12, maxLength: 80 },
   search: { max: 100 },
   resumeMaxBytes: 5 * 1024 * 1024,
+  otp: { length: 6 },
 };
 
 export const RESUME_MIME_TYPES = [
@@ -93,6 +94,14 @@ export const passwordRule = (value) => {
 // Login: presence only — echoing the length policy per attempt is pointless
 // and mirrors the backend, which also only checks presence here.
 export const passwordPresenceRule = (value) => (text(value) ? '' : 'Password is required');
+
+// Mirrors the backend's verifyEmailSchema: exactly six digits.
+export const otpRule = (value) => {
+  const t = text(value);
+  if (!t) return 'Verification code is required';
+  if (!/^\d{6}$/.test(t)) return 'Verification code must be 6 digits';
+  return '';
+};
 
 // Factory (like urlRule) so the caller states whether phone is mandatory.
 export const phoneRule = ({ isRequired = false } = {}) => (value) => {

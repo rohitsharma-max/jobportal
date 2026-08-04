@@ -54,8 +54,7 @@ const protect = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * For public routes whose RESPONSE differs for an admin — the opportunity list
- * and detail endpoints, which hide non-`open` listings from everyone else.
+ * For public routes whose RESPONSE differs for an admin.
  *
  * No token means an anonymous caller, which is allowed: req.user stays
  * undefined and the handler applies the public filter.
@@ -65,6 +64,12 @@ const protect = asyncHandler(async (req, res, next) => {
  * whose 1-minute access token had just expired would silently receive the
  * public list instead of a 401, so the frontend would never refresh and retry,
  * and the dashboard would quietly show a partial view of the data.
+ *
+ * Currently has no callers: the opportunity list and detail endpoints it was
+ * built for now both require login (`protect`) instead, since job data sits
+ * behind a login wall end to end — see routes/opportunityRoutes.js. Left in
+ * place rather than deleted; removing dead middleware is a separate decision
+ * from the security fix that made it dead.
  */
 const optionalAuth = asyncHandler(async (req, res, next) => {
   const token = bearerToken(req);

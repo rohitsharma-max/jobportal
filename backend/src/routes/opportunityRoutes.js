@@ -8,7 +8,7 @@ const {
   updateOpportunityStatus,
   deleteOpportunity,
 } = require('../controllers/opportunityController');
-const { protect, optionalAuth, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const {
   createOpportunitySchema,
@@ -20,20 +20,25 @@ const {
 
 // Mounted at /api/opportunities
 //
-// Reads are public; writes require an admin. Every route validates its input,
-// including the public list route (its ?search= feeds a RegExp).
+// Writes require an admin. Every route validates its input, including the
+// list route (its ?search= feeds a RegExp).
 //
-// The two read routes use optionalAuth rather than no auth at all: they stay
-// open to anonymous callers, but an admin who identifies themselves also sees
-// draft, closed, and archived listings, which the public must not.
+// Job data sits behind login: both the list and the single-opportunity route
+// require a logged-in caller (protect). The list used to run on optionalAuth
+// so it could serve anonymous callers, but that made the detail route's
+// protect gate pointless — a plain curl to the list already returned every
+// open listing in full. isAdmin(req) in the controller still works exactly as
+// before under protect: req.user is always set there, so a normal user sees
+// only `open` listings (same as an admin who narrows with ?status=open) and
+// an admin still sees everything, optionally filtered by ?status=.
 router
   .route('/')
-  .get(optionalAuth, validate(listOpportunitiesSchema), getOpportunities)
+  .get(protect, validate(listOpportunitiesSchema), getOpportunities)
   .post(protect, adminOnly, validate(createOpportunitySchema), createOpportunity);
 
 router
   .route('/:id')
-  .get(optionalAuth, validate(opportunityIdSchema), getOpportunityById)
+  .get(protect, validate(opportunityIdSchema), getOpportunityById)
   .put(protect, adminOnly, validate(updateOpportunitySchema), updateOpportunity)
   // DELETE archives rather than destroying — see the controller for why.
   .delete(protect, adminOnly, validate(opportunityIdSchema), deleteOpportunity);

@@ -53,6 +53,35 @@ const refreshSchema = {
   }),
 };
 
+const verifyEmailSchema = {
+  body: Joi.object({
+    email: email(),
+    otp: Joi.string()
+      .trim()
+      .pattern(/^\d{6}$/)
+      .required()
+      .label('Verification code')
+      .messages({
+        'any.required': 'Verification code is required',
+        'string.base': 'Verification code is required',
+        'string.empty': 'Verification code is required',
+        'string.pattern.base': 'Verification code must be 6 digits',
+      }),
+  }),
+};
+
+const resendOtpSchema = {
+  body: Joi.object({ email: email() }),
+};
+
+// A Google ID token is a JWT of roughly 1-2 KB, so the 255-char default max on
+// requiredText would reject every real credential.
+const googleAuthSchema = {
+  body: Joi.object({
+    idToken: requiredText('Google credential', { max: 5000 }),
+  }),
+};
+
 /* ─────────────────────── opportunities ─────────────────────── */
 
 // Shared by create (POST) and replace (PUT) — both send the full record.
@@ -149,6 +178,9 @@ module.exports = {
   registerSchema,
   loginSchema,
   refreshSchema,
+  verifyEmailSchema,
+  resendOtpSchema,
+  googleAuthSchema,
   createOpportunitySchema,
   updateOpportunitySchema,
   updateOpportunityStatusSchema,

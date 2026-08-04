@@ -48,6 +48,14 @@ const RESUME_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
+// Email-verification OTP. A 6-digit code is only 10^6 possibilities, so the
+// short TTL, the resend cooldown, and above all OTP_MAX_ATTEMPTS are what make
+// it safe — not the code's own entropy.
+const OTP_LENGTH = 6;
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute between sends
+const OTP_MAX_ATTEMPTS = 5; // wrong guesses before the code is burned
+
 module.exports = {
   DOMAINS,
   OPPORTUNITY_TYPES,
@@ -59,4 +67,8 @@ module.exports = {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   MAX_ADMIN_PAGE_SIZE,
+  OTP_LENGTH,
+  OTP_TTL_MS,
+  OTP_RESEND_COOLDOWN_MS,
+  OTP_MAX_ATTEMPTS,
 };

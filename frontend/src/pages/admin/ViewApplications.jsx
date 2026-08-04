@@ -28,6 +28,12 @@ export default function ViewApplications() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Keyed by application id (not a single flag) so approving one row doesn't
+  // disable every other row's buttons — the requests are independent PATCHes
+  // and there's no reason to serialize them. The value is the target status,
+  // so the clicked button can show "Approving…"/"Rejecting…" instead of just
+  // going dark.
+  const [pendingStatus, setPendingStatus] = useState({});
 
   // useCallback + an explicit dependency list, so the effect below declares
   // everything it actually reads. `filters.company` is included here even though
@@ -86,6 +92,7 @@ export default function ViewApplications() {
   const fmtDate = (date) => new Date(date).toLocaleDateString();
 
   const updateStatus = async (id, status) => {
+    setPendingStatus((prev) => ({ ...prev, [id]: status }));
     try {
       const res = await api.patch(`/applications/${id}/status`, { status });
       setApplications((prev) => prev.map((item) => (item._id === id ? res.data.data : item)));
@@ -97,6 +104,14 @@ export default function ViewApplications() {
         err.response?.data?.message || 'Could not update application status.',
         'error',
       );
+    } finally {
+      // Always clears, so a failed request re-enables the row's buttons
+      // instead of leaving them stuck.
+      setPendingStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
   };
 
@@ -256,8 +271,20 @@ export default function ViewApplications() {
                     <td>{fmtDate(application.createdAt)}</td>
                     <td>
                       <div className="table-actions">
-                        <button className="btn btn-outline btn-sm" disabled={(application.status || 'Pending') === 'Approved'} onClick={() => updateStatus(application._id, 'Approved')}>Approve</button>
-                        <button className="btn btn-danger btn-sm" disabled={(application.status || 'Pending') === 'Rejected'} onClick={() => updateStatus(application._id, 'Rejected')}>Reject</button>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          disabled={(application.status || 'Pending') === 'Approved' || !!pendingStatus[application._id]}
+                          onClick={() => updateStatus(application._id, 'Approved')}
+                        >
+                          {pendingStatus[application._id] === 'Approved' ? 'Approving…' : 'Approve'}
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          disabled={(application.status || 'Pending') === 'Rejected' || !!pendingStatus[application._id]}
+                          onClick={() => updateStatus(application._id, 'Rejected')}
+                        >
+                          {pendingStatus[application._id] === 'Rejected' ? 'Rejecting…' : 'Reject'}
+                        </button>
                       </div>
                     </td>
                   </tr>
