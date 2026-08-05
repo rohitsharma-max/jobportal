@@ -6,7 +6,7 @@ const isConfigured = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
 
 let transporter = null;
 if (isConfigured) {
-  const transporter = nodemailer.createTransport({
+  transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
     secure: false,
