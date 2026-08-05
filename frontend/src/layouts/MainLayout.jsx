@@ -16,7 +16,7 @@ export default function MainLayout() {
           It goes after <main>, outside .page's .container, so its border and
           background run the full width while its text still aligns to the
           container via its own. */}
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
