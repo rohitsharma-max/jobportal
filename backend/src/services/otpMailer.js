@@ -87,7 +87,7 @@ async function deliverCode({ to, otp, subject, html, label }) {
     // silences its own skip notice, so a deliberately-forced failure in the
     // test suite doesn't bury real test output.
     if (process.env.NODE_ENV !== 'test') {
-      console.error(`Failed to send ${label} to ${to}:`, err.message);
+      console.error(`Failed to send ${label} to ${to}:`, err);
     }
     throw new EmailDeliveryError();
   }
