@@ -1,15 +1,17 @@
 // Sends email via Nodemailer using Gmail credentials from .env.
 // If credentials are missing, it logs and no-ops so the app still works.
 const nodemailer = require('nodemailer');
+const dns = require("dns");
 
+dns.setDefaultResultOrder("ipv4first");
 const isConfigured = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
 
 let transporter = null;
 if (isConfigured) {
   transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
