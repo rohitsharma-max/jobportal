@@ -1,16 +1,20 @@
-// Centralized MongoDB connection via Mongoose.
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 async function connectDB() {
-  const uri = process.env.MONGO_URI;
+  if (cached.conn) return cached.conn;
 
-  if (!uri) {
-    throw new Error('MONGO_URI is not set. Add it to your .env file.');
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI);
   }
 
-  const conn = await mongoose.connect(uri);
-  console.log(`✅ MongoDB connected: ${conn.connection.host}`);
-  return conn;
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
 
 module.exports = connectDB;
