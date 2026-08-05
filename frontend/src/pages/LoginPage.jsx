@@ -84,8 +84,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 420, margin: '40px auto' }}>
-      <h1 style={{ fontSize: '1.5rem' }}>Log in</h1>
+    <div className="card auth-card">
+      <h1>Log in</h1>
       {serverError && <div className="alert alert-error">{serverError}</div>}
       <form className="form" onSubmit={handleSubmit} noValidate>
         <FormField label="Email" name="email" error={errors.email} required>
@@ -121,6 +121,11 @@ export default function LoginPage() {
           {submitting ? 'Logging in…' : 'Log in'}
         </button>
       </form>
+      <p className="muted" style={{ marginTop: 12, textAlign: 'center' }}>
+        <Link to="/forgot-password" className="back-link" style={{ margin: 0 }}>
+          Forgot your password?
+        </Link>
+      </p>
       <GoogleSignInButton onSignedIn={(user) => navigate(user.role === 'admin' ? '/admin' : from, { replace: true })} />
       <p className="muted" style={{ marginTop: 16, textAlign: 'center' }}>
         No account? <Link to="/register" className="back-link" style={{ margin: 0 }}>Register</Link>

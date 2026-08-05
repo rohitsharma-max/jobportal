@@ -13,6 +13,7 @@ const {
   email,
   password,
   passwordPresence,
+  otpCode,
   objectId,
   enumOf,
   url,
@@ -56,22 +57,36 @@ const refreshSchema = {
 const verifyEmailSchema = {
   body: Joi.object({
     email: email(),
-    otp: Joi.string()
-      .trim()
-      .pattern(/^\d{6}$/)
-      .required()
-      .label('Verification code')
-      .messages({
-        'any.required': 'Verification code is required',
-        'string.base': 'Verification code is required',
-        'string.empty': 'Verification code is required',
-        'string.pattern.base': 'Verification code must be 6 digits',
-      }),
+    // The inline Joi that used to sit here moved to joiTypes.otpCode() when
+    // password reset needed the identical rule — one definition, so the two
+    // endpoints can't drift into accepting different code shapes.
+    otp: otpCode(),
   }),
 };
 
 const resendOtpSchema = {
   body: Joi.object({ email: email() }),
+};
+
+/* ── password reset ── */
+
+// Only an address. The response is deliberately identical whether or not that
+// address has an account (see authController.forgotPassword), so there is
+// nothing else this endpoint can usefully accept.
+const forgotPasswordSchema = {
+  body: Joi.object({ email: email() }),
+};
+
+// password(), not passwordPresence(): this SETS a new password, so the full
+// length policy applies exactly as it does at registration. Using the
+// presence-only variant here would let a 1-character password through the
+// reset path while the register path rejected it.
+const resetPasswordSchema = {
+  body: Joi.object({
+    email: email(),
+    otp: otpCode('Reset code'),
+    password: password(),
+  }),
 };
 
 // A Google ID token is a JWT of roughly 1-2 KB, so the 255-char default max on
@@ -177,6 +192,8 @@ const updateApplicationStatusSchema = {
 module.exports = {
   registerSchema,
   loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   refreshSchema,
   verifyEmailSchema,
   resendOtpSchema,

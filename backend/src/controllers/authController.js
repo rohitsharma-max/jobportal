@@ -6,7 +6,16 @@ const {
   startSession,
   rotateSession,
   revokeFamily,
+  revokeAllForUser,
 } = require('../services/sessions');
+const { isEmailUsable } = require('../services/otpMailer');
+const {
+  RESET_OTP_SELECT,
+  resetCooldownRemainingMs,
+  attachResetOtp,
+  clearResetOtp,
+  deliverResetOtp,
+} = require('../services/passwordReset');
 const {
   EmailNotConfiguredError,
   EmailDeliveryError,
@@ -338,6 +347,161 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
+// POST /api/auth/forgot-password — mail a reset code.
+//
+// Answers 200 with ONE fixed message for every request: unknown address, real
+// address, address currently inside its resend cooldown. That uniformity is the
+// entire security property of this endpoint, and it is stricter than
+// resend-otp's behaviour on purpose — resend-otp answers 429 OTP_COOLDOWN and
+// 409 ALREADY_VERIFIED, which its own comments admit reveal account existence.
+// Nothing forces that trade-off here, so it isn't repeated: a caller cannot use
+// this endpoint to tell a registered address from an unregistered one.
+//
+// The client does NOT get a retryAfter for the cooldown, and doesn't need one —
+// it starts its own 60s countdown from a successful submit, exactly as the
+// verify-email page already does with `codeJustSent`.
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.valid.body;
+
+  // Defined once and used by every 200 below. Two strings that were merely
+  // SIMILAR would still let a script tell the branches apart by reading
+  // `message`, so there is exactly one wording and no call site writes its own.
+  const FORGOT_MESSAGE =
+    'If an account exists for that address, a password reset code is on its way';
+  const forgotOk = (data) =>
+    res.status(200).json({ success: true, data, message: FORGOT_MESSAGE });
+
+  // Checked BEFORE the user lookup, deliberately. deliverResetOtp() would raise
+  // this same condition a few lines down, but only on the branch that found an
+  // account — so a server with no mail configured would answer 503 for
+  // registered addresses and 200 for unknown ones, handing back precisely the
+  // account-existence oracle the uniform 200 above exists to remove.
+  if (!isEmailUsable()) return emailNotConfigured(res);
+
+  const user = await User.findOne({ email }).select(RESET_OTP_SELECT);
+  // Identical status, message and shape as the real path below. The only thing
+  // that can differ is `devOtp`, which is never present in production.
+  if (!user) return forgotOk({ email });
+
+  // Inside the cooldown: send nothing, write nothing, and say exactly what the
+  // other branches say. Returning 429 here (resend-otp's choice) would leak
+  // both that the account exists AND that someone recently requested a code
+  // for it.
+  if (resetCooldownRemainingMs(user) > 0) return forgotOk({ email: user.email });
+
+  // A reset code is offered even to accounts with no password at all
+  // (authProvider: 'google'). Completing the reset gives them one and promotes
+  // them to 'both' — see resetPassword. Refusing here with "this account uses
+  // Google" would be friendlier but would add a second enumeration signal that
+  // also discloses the provider.
+  const otp = attachResetOtp(user);
+
+  let delivery;
+  try {
+    delivery = await deliverResetOtp({ user, otp });
+  } catch (err) {
+    if (err instanceof EmailNotConfiguredError) return emailNotConfigured(res);
+    // A transient SMTP failure. This IS a residual enumeration signal — it can
+    // only fire on the branch that found an account — but it needs the attacker
+    // to catch a window where mail is broken, and swallowing it into a 200
+    // would leave a real user retrying forever with no code and no explanation.
+    // The isEmailUsable() check above removes the permanent, always-reproducible
+    // version of this leak, which is the one that mattered.
+    if (err instanceof EmailDeliveryError) return emailSendFailed(res);
+    throw err;
+  }
+
+  // Saved only after the code is genuinely on its way — same rule as register.
+  await user.save();
+
+  return forgotOk({ email: user.email, ...delivery });
+});
+
+// POST /api/auth/reset-password — consume the code, set the new password, sign in.
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, otp, password } = req.valid.body;
+
+  const user = await User.findOne({ email }).select(RESET_OTP_SELECT);
+
+  // Same guard sequence as verifyEmail, for the same reasons.
+  const invalid = () =>
+    res.status(400).json({
+      success: false,
+      data: null,
+      code: 'OTP_INVALID',
+      message: 'That code is not valid. Please check it and try again.',
+    });
+
+  // Unknown address gets the wrong-code response, so this endpoint isn't a
+  // second way to ask whether an account exists.
+  if (!user) return invalid();
+
+  if (
+    !user.passwordResetOtpHash ||
+    !user.passwordResetOtpExpiresAt ||
+    user.passwordResetOtpExpiresAt < new Date()
+  ) {
+    return res.status(400).json({
+      success: false,
+      data: null,
+      code: 'OTP_EXPIRED',
+      message: 'That code has expired. Request a new one.',
+    });
+  }
+
+  // Six digits is a million guesses — cheap to exhaust without this. Burn the
+  // code rather than merely refusing, so the attacker has to trigger a new
+  // email (and therefore the cooldown) to keep going.
+  if ((user.passwordResetOtpAttempts || 0) >= OTP_MAX_ATTEMPTS) {
+    clearResetOtp(user);
+    await user.save();
+    return res.status(429).json({
+      success: false,
+      data: null,
+      code: 'OTP_ATTEMPTS_EXCEEDED',
+      message: 'Too many incorrect attempts. Please request a new code.',
+    });
+  }
+
+  if (!verifyOtp(user.email, otp, user.passwordResetOtpHash)) {
+    user.passwordResetOtpAttempts = (user.passwordResetOtpAttempts || 0) + 1;
+    await user.save();
+    return invalid();
+  }
+
+  // The code was mailed to this address and came back, which proves control of
+  // the mailbox — the exact same evidence verify-email accepts. So an
+  // unverified account becomes verified here rather than being sent off to
+  // enter a second code from the same inbox to prove the same fact.
+  user.password = password; // the pre('save') hook hashes it
+  user.emailVerified = true;
+  // A Google-only account had no password and authProvider 'google'; it now has
+  // both credentials. Keyed on googleId rather than the previous authProvider
+  // value so this is idempotent and can't downgrade an existing 'both'.
+  user.authProvider = user.googleId ? 'both' : 'email';
+  clearResetOtp(user);
+  // Any pending verification code is moot now the address is proven — same
+  // cleanup googleSignIn does when Google proves it another way.
+  clearOtp(user);
+  // The global kill-switch refresh checks. Its comment in that handler says it
+  // is "retained for password changes" — this is that case. Anyone holding a
+  // refresh token minted before the reset (including whoever prompted the user
+  // to reset in the first place) is cut off.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  await user.save();
+
+  // Order matters: revoke BEFORE starting the new session, or the fresh refresh
+  // token gets swept up by the same revokeAllForUser call and the user is
+  // signed out again on their first refresh, about a minute later.
+  await revokeAllForUser(user._id);
+
+  return res.status(200).json({
+    success: true,
+    data: { user: publicUser(user), ...(await startSession(user)) },
+    message: 'Password updated — you are now signed in',
+  });
+});
+
 // POST /api/auth/refresh — exchange a valid refresh token for a fresh pair.
 //
 // The presented token is rotated out and genuinely revoked (see
@@ -569,4 +733,15 @@ const getMe = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { register, verifyEmail, resendOtp, login, refresh, logout, getMe, googleSignIn };
+module.exports = {
+  register,
+  verifyEmail,
+  resendOtp,
+  login,
+  forgotPassword,
+  resetPassword,
+  refresh,
+  logout,
+  getMe,
+  googleSignIn,
+};

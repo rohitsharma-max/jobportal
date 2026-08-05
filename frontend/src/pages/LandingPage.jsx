@@ -106,18 +106,24 @@ export default function LandingPage() {
                   className="landing-track-item"
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
+                  {/* Every chip holds exactly the same two lines (number +
+                      label), which is what lets all three match height and
+                      keeps the → connectors on one line. The outcome badges
+                      used to sit inside this div and made the Decision chip
+                      roughly half again as tall as its neighbours — they are a
+                      sibling below now, not a child. Don't move them back in. */}
                   <div className={`landing-track-stage ${stage.stageClass}`}>
                     <span className="landing-track-num" aria-hidden="true">
                       {i + 1}
                     </span>
                     <span className="landing-track-label">{stage.label}</span>
-                    {stage.label === 'Decision' && (
-                      <span className="landing-track-outcomes">
-                        <span className="badge badge-success">Approved</span>
-                        <span className="badge badge-danger">Rejected</span>
-                      </span>
-                    )}
                   </div>
+                  {stage.label === 'Decision' && (
+                    <span className="landing-track-outcomes">
+                      <span className="badge badge-success">Approved</span>
+                      <span className="badge badge-danger">Rejected</span>
+                    </span>
+                  )}
                   <p className="landing-track-caption">{stage.caption}</p>
                 </div>
               </div>
