@@ -75,6 +75,27 @@ const password = (label = 'Password', { min = 6, max = 72 } = {}) =>
  */
 const passwordPresence = (label = 'Password') => requiredText(label, { max: 200 });
 
+/**
+ * A 6-digit one-time code. Shared by email verification and password reset so
+ * the two endpoints cannot drift into accepting different shapes — the digits
+ * come from the same generator (utils/otp.js) in both cases.
+ *
+ * The label is a parameter because the reset flow calls it a "reset code" in
+ * its UI, and a message naming the wrong thing is worse than a generic one.
+ */
+const otpCode = (label = 'Verification code') =>
+  Joi.string()
+    .trim()
+    .pattern(/^\d{6}$/)
+    .required()
+    .label(label)
+    .messages({
+      'any.required': `${label} is required`,
+      'string.base': `${label} is required`,
+      'string.empty': `${label} is required`,
+      'string.pattern.base': `${label} must be 6 digits`,
+    });
+
 const objectId = (label, { required = true } = {}) => {
   const base = Joi.string()
     .trim()
@@ -217,6 +238,7 @@ module.exports = {
   email,
   password,
   passwordPresence,
+  otpCode,
   objectId,
   enumOf,
   url,

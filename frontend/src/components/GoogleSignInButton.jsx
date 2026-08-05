@@ -144,7 +144,11 @@ export default function GoogleSignInButton({ onSignedIn }) {
         window.google.accounts.id.renderButton(containerRef.current, {
           theme: 'outline',
           size: 'large',
-          width: 320,
+          // 376, not 320: this is .auth-card's inner width (440 minus 2 ×
+          // --space-6 padding), so the Google button lines up with the form
+          // inputs above it instead of sitting visibly narrower than them.
+          // Google caps this at 400, so don't raise it much further.
+          width: 376,
           text: 'continue_with',
           logo_alignment: 'center',
         });

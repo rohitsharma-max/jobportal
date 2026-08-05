@@ -94,6 +94,25 @@ export function AuthProvider({ children }) {
     return res.data.data;
   }, []);
 
+  // Asks for a reset code. No session involved, and deliberately no way for the
+  // caller to learn whether the address actually has an account — the server
+  // answers identically either way, on purpose. Returns the payload so the
+  // caller can read `devOtp` when the server has no mail configured.
+  const forgotPassword = useCallback(async (email) => {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data.data;
+  }, []);
+
+  // Completing a reset both sets the password AND opens a session, so this goes
+  // through persist() like login and verifyEmail. The server has already
+  // revoked every older session by this point, so the tokens returned here are
+  // the only live ones for this account.
+  const resetPassword = useCallback(async (email, otp, password) => {
+    const res = await api.post('/auth/reset-password', { email, otp, password });
+    persist(res.data.data);
+    return res.data.data.user;
+  }, []);
+
   // `idToken` is the credential Google Identity Services hands us. The server
   // verifies it and returns OUR normal token pair, so nothing downstream needs
   // to know this session began with Google.
@@ -118,7 +137,18 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, verifyEmail, resendOtp, googleLogin, logout }}
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        verifyEmail,
+        resendOtp,
+        forgotPassword,
+        resetPassword,
+        googleLogin,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -12,21 +12,9 @@ import {
   applyServerErrors,
   LIMITS,
 } from '../utils/validationRules';
-
-/* ── Password strength helper ── */
-function getStrength(pw) {
-  if (!pw) return { level: 0, label: '' };
-  let score = 0;
-  if (pw.length >= 6) score++;
-  if (pw.length >= 10) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  if (score <= 2) return { level: 1, label: 'Weak' };
-  if (score <= 3) return { level: 2, label: 'Medium' };
-  return { level: 3, label: 'Strong' };
-}
-const strengthCls = ['', 'weak', 'medium', 'strong'];
+// Moved out of this file when ResetPasswordPage needed the same meter — see
+// utils/passwordStrength.js for why it's shared rather than duplicated.
+import { getStrength, strengthCls } from '../utils/passwordStrength';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -112,8 +100,8 @@ export default function RegisterPage() {
   const strength = getStrength(form.password);
 
   return (
-    <div className="card" style={{ maxWidth: 420, margin: '40px auto' }}>
-      <h1 style={{ fontSize: '1.5rem' }}>Create account</h1>
+    <div className="card auth-card">
+      <h1>Create account</h1>
       {serverError && <div className="alert alert-error">{serverError}</div>}
       <form className="form" onSubmit={handleSubmit} noValidate>
         <FormField label="Full name" name="name" error={errors.name} required>

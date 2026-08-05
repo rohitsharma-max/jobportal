@@ -11,79 +11,188 @@
  * choice override a dark OS — collapsing the two blocks into one would lose
  * that case, so don't.
  */
+/*
+ * PALETTE: slate + indigo, per the supplied light/dark spec. Two conventions
+ * in here are worth understanding before editing any colour:
+ *
+ *   1. FILL vs INK. Several of the spec's colours are vivid enough to work as
+ *      a background but too light to carry text on one. Success #22c55e as
+ *      ink measures 2.28:1 on white and warning #f59e0b 2.15:1 — both far
+ *      under AA, and both would land on the Pending/Approved/Rejected badges,
+ *      which are the most load-bearing text in this app. So each of those
+ *      hues has two tokens: `--x` is the AA-safe INK, `--x-fill` is the
+ *      spec's vivid value for NON-TEXT use (bars, dots, indicators). Never
+ *      paint text in a `-fill` token.
+ *   2. Light mode darkens on hover, dark mode LIGHTENS. `--primary-dark` is
+ *      named for the light theme's behaviour; in the dark blocks it is
+ *      deliberately lighter than `--primary`, because "raised" reads as
+ *      lighter on a dark ground. Don't "fix" that to match its name.
+ *
+ * Every pair below was measured, not eyeballed.
+ */
 :root {
-  --bg: #f6f7fb;
+  /* Page is the tinted surface and cards are pure white, i.e. cards read as
+     ELEVATED. The spec listed these the other way round (white page, #f8fafc
+     cards) but the dark theme has card lighter than page — so taking the spec
+     literally would have elevation pointing opposite ways in the two themes.
+     Only 1.03:1 separates these two values, so a recessed card would also
+     have leaned entirely on its border to be visible at all. */
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --border: #e4e7ee;
-  --text: #1a1d29;
-  --text-muted: #6b7280;
+  --border: #e2e8f0;
+  /* Form controls only. --border at 1.23:1 on white is fine for a divider
+     between two surfaces, but an input's edge is the only thing marking where
+     the control is, so it gets a step more definition. */
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  /* Secondary text sitting on the landing hero's --primary-bg wash rather than
+     on --bg/--surface. #64748b measures 4.76:1 on the card and 4.55:1 on the
+     page, but only 4.26:1 on that lavender wash — and the hero lede is 18px
+     regular, which is NOT WCAG "large", so it needs the full 4.5. One step
+     darker in the same slate family fixes it without darkening every piece of
+     secondary text in the app. */
+  --text-muted-on-wash: #475569;
+  /* #4f46e5, not the spec's #6366f1, and only for this reason: #6366f1
+     measures 4.47:1 both as ink on white and under a white button label —
+     0.03 short of AA in the two places primary is used most. #4f46e5 is the
+     same hue at 6.29:1. #6366f1 is kept as --primary-accent below, where
+     nothing has to be legible on top of it. */
   --primary: #4f46e5;
   --primary-dark: #4338ca;
+  /* The spec's indigo, for non-text use: focus rings and the focused input
+     border. Both are boundaries judged against 3:1, which it clears at 4.27:1
+     — so the brand hue still shows up in the interaction states. */
+  --primary-accent: #6366f1;
   --primary-bg: #eef2ff;
-  /* Darkened from the original #059669/#dc2626/#2563eb: those measured
-     3.58:1 / 4.41:1 / 4.24:1 against their own -bg tints below — all three
-     failed AA on the status badges (Pending/Approved/Rejected), the most
-     load-bearing text in this app. Pre-existing, not a dark-mode artifact;
-     fixed here since the tints stay put (used too widely to touch) and the
-     ink was the smallest lever that clears 4.5:1 without changing the hue. */
-  --success: #047857;
-  --success-bg: #ecfdf5;
-  --success-border: #a7f3d0;
-  --danger: #c81e1e;
-  --danger-dark: #b91c1c;
+  --success: #15803d;
+  --success-fill: #22c55e;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --danger: #b91c1c;
+  --danger-dark: #991b1b;
+  --danger-fill: #ef4444;
   --danger-bg: #fef2f2;
   --danger-border: #fecaca;
   --warning: #b45309;
+  --warning-fill: #f59e0b;
   --warning-bg: #fffbeb;
   --info: #1d4ed8;
-  --info-bg: #dbeafe;
+  --info-bg: #eff6ff;
   --info-border: #bfdbfe;
   --toast-danger-bg: #fef2f2e8;
-  --toast-success-bg: #ecfdf5e8;
+  --toast-success-bg: #f0fdf4e8;
   --toast-info-bg: #eff6ffe8;
   /* Ink for text/icons painted on a filled --primary/--danger surface (not on
      a -bg tint — that's --primary/--danger/--success themselves). Split out
      because in dark mode the fill lightens (see below) and a light fill
      needs dark ink, not white — one token can't be both. */
   --on-accent: #ffffff;
+  /* The landing track's step-1 chip. It needs its own pair because it is the
+     one chip that sits on the hero's --primary-bg wash, so it cannot be
+     tinted from that same token — that is exactly how it ended up invisible
+     before. --surface can't serve either: in dark mode #1e293b on the
+     #1e1b4b wash is 1.09:1. */
+  --chip-apply-bg: #ffffff;
+  --chip-apply-ink: #4f46e5;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
-  --shadow-lg: 0 8px 24px rgba(16, 24, 40, 0.16);
+  /* Slate-tinted to match the palette, replacing the old blue-grey rgba. */
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.16);
   --sans: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Spacing scale. Deliberately outside the theme blocks below — spacing is
+     not a color and must never differ between light and dark, or the two
+     themes would drift into two different layouts. The app previously used
+     one-off values (16/18/20/22/24/32/40/48/56); new and edited rules use
+     these steps instead. Existing untouched rules keep their literals rather
+     than being swept wholesale — a mass find/replace here would be a large
+     diff with real regression risk and no visible payoff. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  /* Type scale. The landing page keeps its own clamp() scale (see the landing
+     section at the bottom) — that one is already coherent and fluid, and
+     flattening it into these fixed steps would make the hero smaller, not
+     better. These cover the app chrome: page headers, cards, auth forms. */
+  --text-xs: 0.78rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.125rem;
+  --h3: 1.1rem;
+  --h2: 1.35rem;
+  --h1: 1.7rem;
   /* Native form controls / scrollbars should render as light chrome to match. */
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    /* Surface lighter than bg — elevation reads as "lighter" in dark UI,
-       the inverse of light mode where cards are white on grey. */
-    --bg: #12141a;
-    --surface: #1e2129;
-    --border: #2e323c;
-    /* Off-white on near-black, not pure #fff on #000 — pure values vibrate. */
-    --text: #e9eaef;
-    --text-muted: #9aa0b4;
+    /* THIS BLOCK IS THE SOURCE OF TRUTH for the dark palette. The
+       :root[data-theme='dark'] block below is a verbatim copy — CSS has no way
+       to share a set of custom properties between a media-gated selector and a
+       plain one, so any change here must be repeated there by hand. */
+    /* Surface lighter than bg — elevation reads as "lighter" in dark UI. Light
+       mode now matches this direction too (tinted page, white cards).
+       The whole ramp sits one step lower than the original spec: #0f172a was
+       the page and read as navy rather than dark, so it became the CARD and
+       slate-950 took over as the page. Same family, no new hues — and every
+       text pair gained contrast in the move (muted 9.85 -> 12.02 on a card,
+       primary 4.90 -> 5.98).
+       The cost is elevation: card-vs-page is only 1.13:1 by luminance now, so
+       --border below is deliberately NOT darkened to match. It is doing most
+       of the work of showing where a card ends. */
+    --bg: #020617;
+    --surface: #0f172a;
+    --border: #334155;
+    --border-strong: #475569;
+    --text: #f8fafc;
+    --text-muted: #cbd5e1;
+    /* Same value as --text-muted: dark mode's wash is deep enough that muted
+       text already measures 10.77:1 on it, so there is nothing to correct. The
+       token still has to exist here, or .landing-hero's override would fall
+       back to light mode's dark slate on a dark wash. */
+    --text-muted-on-wash: #cbd5e1;
     /* #4f46e5 measures ~2.9:1 on this bg — lifted to indigo-400 so it's
-       readable as text/links, still unmistakably the same brand hue. */
+       readable as text/links, still unmistakably the same brand hue. Unlike
+       light mode this one value covers both ink and fill: 4.90:1 as text on a
+       card, and it takes dark ink cleanly (see --on-accent). */
     --primary: #818cf8;
     /* Hover/emphasis must read as RAISED in a dark UI, i.e. lighter, not
        darker like in light mode — #6366f1 (darker than --primary) had this
        backwards, and no ink passed AA on it either. #a5b4fc is lighter than
        --primary and every ink check below passes on it. */
     --primary-dark: #a5b4fc;
-    --primary-bg: #211f3a;
-    --success: #10b981;
+    /* No separate accent needed here: --primary already clears the 3:1 a
+       focus ring needs, so ring and text can share one value. The split only
+       exists in light mode, where #6366f1 fails as ink. */
+    --primary-accent: #818cf8;
+    /* Deepened alongside the page. It has to stay clearly lighter than --bg
+       (the hero is a full-bleed band and would vanish otherwise) while leaving
+       the step-1 chip room to sit on top of it — the two constraints pull
+       against each other, which is why --chip-apply-bg exists. */
+    --primary-bg: #171340;
+    /* Dark mode needs no fill/ink split at all — every one of the spec's dark
+       semantic colours clears AA as text on its own tint (6.2–9.7:1). The
+       -fill aliases exist purely so rules can name one token in both themes. */
+    --success: #22c55e;
+    --success-fill: #22c55e;
     --success-bg: #0e2a1f;
     --success-border: #1f4a3a;
     --danger: #f87171;
     /* Same lighten-on-hover fix as --primary-dark. */
     --danger-dark: #fca5a5;
+    --danger-fill: #f87171;
     --danger-bg: #2a1616;
     --danger-border: #5b2323;
     --warning: #fbbf24;
+    --warning-fill: #fbbf24;
     --warning-bg: #2a1f0c;
     --info: #60a5fa;
     --info-bg: #14233d;
@@ -99,29 +208,46 @@
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
     /* Dark ink for --on-accent: a light fill (the lifted --primary/--danger
        above) needs dark text on top, not white — #fff on #818cf8 is only
-       2.98:1. #141625 clears AA on every filled surface that uses it. */
-    --on-accent: #141625;
+       2.98:1. slate-950 clears AA on every filled surface that uses it
+       (6.76:1 on --primary). Not the same token as --surface any more, so
+       don't collapse the two. */
+    --on-accent: #020617;
+    /* Lifted above --surface on purpose: --surface would be near-invisible
+       against the --primary-bg hero wash this chip sits on, which is exactly
+       the bug this token pair was created to prevent. #293548 reads at 1.41:1
+       on the wash plus its border, and takes #e0e7ff ink at ~10:1. */
+    --chip-apply-bg: #293548;
+    --chip-apply-ink: #e0e7ff;
     color-scheme: dark;
   }
 }
 
+/* Verbatim copy of the @media block above — see the note there. If you edit
+   one of these two blocks and not the other, an explicitly-chosen dark theme
+   and an OS-driven one will silently render in different colours. */
 :root[data-theme='dark'] {
-  --bg: #12141a;
-  --surface: #1e2129;
-  --border: #2e323c;
-  --text: #e9eaef;
-  --text-muted: #9aa0b4;
+  --bg: #020617;
+  --surface: #0f172a;
+  --border: #334155;
+  --border-strong: #475569;
+  --text: #f8fafc;
+  --text-muted: #cbd5e1;
+  --text-muted-on-wash: #cbd5e1;
   --primary: #818cf8;
   --primary-dark: #a5b4fc;
-  --primary-bg: #211f3a;
-  --success: #10b981;
+  --primary-accent: #818cf8;
+  --primary-bg: #171340;
+  --success: #22c55e;
+  --success-fill: #22c55e;
   --success-bg: #0e2a1f;
   --success-border: #1f4a3a;
   --danger: #f87171;
   --danger-dark: #fca5a5;
+  --danger-fill: #f87171;
   --danger-bg: #2a1616;
   --danger-border: #5b2323;
   --warning: #fbbf24;
+  --warning-fill: #fbbf24;
   --warning-bg: #2a1f0c;
   --info: #60a5fa;
   --info-bg: #14233d;
@@ -132,7 +258,9 @@
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --on-accent: #141625;
+  --on-accent: #020617;
+  --chip-apply-bg: #293548;
+  --chip-apply-ink: #e0e7ff;
   color-scheme: dark;
 }
 
@@ -150,10 +278,41 @@ body {
 a { color: inherit; text-decoration: none; }
 h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
 
+/* ============ Focus ============ */
+/* The stylesheet had no focus styling at all: every button, link and nav item
+   fell back to the browser's default outline, which differs per engine and is
+   invisible against some of our surfaces. :focus-visible rather than :focus,
+   so a mouse click doesn't leave a ring behind on the thing you just clicked
+   — keyboard and other non-pointer input still get one.
+   Form controls are excluded because they already have their own treatment
+   (the border-color + box-shadow ring further down), which is deliberately
+   shown on plain :focus so it appears on click too. Stacking this outline on
+   top would double up the indicator. */
+:focus-visible {
+  /* --primary-accent, not --primary: a ring is a boundary, judged against
+     3:1, so it can use the palette's brighter indigo that --primary can't. */
+  outline: 2px solid var(--primary-accent);
+  outline-offset: 2px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
 /* ============ Layout ============ */
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 .container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-.page { flex: 1; padding: 32px 0 56px; }
+/* overflow-x lives HERE, not on .landing, and it is `clip` rather than
+   `hidden`. Both details matter:
+     - Here, because .page already spans the viewport, so it clips only the
+       few pixels a 100vw full-bleed child overflows by (100vw counts the
+       scrollbar, the visible page doesn't). On .landing — which sits inside
+       the 1080px .container — the same rule clipped the landing hero's
+       breakout back to container width, cancelling the very effect it was
+       written to protect.
+     - `clip`, because `hidden` would make .page a scroll container: it forces
+       the other axis from `visible` to `auto` (giving .page its own nested
+       scrollbar) and can break `position: sticky` on descendants. `clip`
+       does neither. The navbar sits outside .page, so its sticky is safe
+       regardless, but there's no reason to leave the trap armed. */
+.page { flex: 1; padding: var(--space-6) 0 56px; overflow-x: clip; }
 
 /* ============ Navbar ============ */
 .navbar {
@@ -163,27 +322,93 @@ h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
 }
 .navbar-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
 .navbar-brand { font-weight: 700; font-size: 1.15rem; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-.navbar-links { display: flex; gap: 8px; align-items: center; }
-.navbar-links a {
-  padding: 8px 14px; border-radius: var(--radius-sm); color: var(--text-muted); font-weight: 500; font-size: 0.95rem;
+/* Holds the always-visible actions and the (mobile-)collapsible link list.
+   Must stay unpositioned: the mobile panel below is absolute against .navbar
+   (which is sticky, and therefore the nearest positioned ancestor), so giving
+   this a `position` would re-anchor the panel to it and break the drop-down. */
+.navbar-right { display: flex; align-items: center; gap: var(--space-2); }
+/* order: -1 puts the theme toggle back to the LEFT of the links on desktop.
+   The toggle had to move out of .navbar-links in the markup so it stays
+   reachable without opening the mobile menu; this keeps the wide layout
+   looking exactly as it did before that move. */
+.navbar-actions { display: flex; align-items: center; gap: var(--space-1); order: -1; }
+.navbar-links { display: flex; gap: var(--space-2); align-items: center; }
+.navbar-greeting { padding: 0 var(--space-2); font-size: 0.9rem; }
+/* The :not(.btn) guard is load-bearing, not decoration. `.navbar-links a` is
+   a class+element selector (specificity 0,1,1); `.btn-primary` and `.btn-sm`
+   are single classes (0,1,0). So without the guard THIS rule outranks the
+   button styles on any <a class="btn"> in the navbar — which is exactly what
+   the Register link is. The result was a filled indigo button wearing
+   --text-muted grey ink at nav-link padding, whose hover then flipped the
+   label to dark --text. The --on-accent token that Navbar.jsx's comment
+   promises never applied at all.
+   Excluding buttons here, rather than bumping .btn's specificity or reaching
+   for !important, states the actual intent: nav links are text links, buttons
+   are buttons. The next person to put a button in the navbar gets working
+   styles instead of rediscovering this. */
+.navbar-links a:not(.btn) {
+  padding: var(--space-2) 14px; border-radius: var(--radius-sm); color: var(--text-muted); font-weight: 500; font-size: var(--text-base);
 }
-.navbar-links a:hover { background: var(--bg); color: var(--text); }
+.navbar-links a:not(.btn):hover { background: var(--bg); color: var(--text); }
 /* Icon-only, muted by default so it doesn't compete with the adjacent
    Login/Register buttons and nav links — it only needs to be findable. */
-.theme-toggle {
+/* Shared by both icon-only navbar buttons. */
+.theme-toggle,
+.navbar-toggle {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; padding: 0; border: none; background: transparent;
+  /* 40px, up from 34px: 34 was below every touch-target guideline, and these
+     are the only controls in the navbar that are icon-only with no text label
+     to widen their hit area. */
+  width: 40px; height: 40px; padding: 0; border: none; background: transparent;
   border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;
   font-size: 1rem; line-height: 1; flex-shrink: 0;
 }
-.theme-toggle:hover { background: var(--bg); color: var(--text); }
-.navbar-links a.active { color: var(--primary); background: var(--primary-bg); }
+/* Touch and stylus input can't aim as precisely as a mouse, so go to the full
+   44px there. Gated on the input device rather than viewport width — a large
+   tablet needs this and a small laptop doesn't. */
+@media (pointer: coarse) {
+  .theme-toggle,
+  .navbar-toggle { width: 44px; height: 44px; }
+}
+.theme-toggle:hover,
+.navbar-toggle:hover { background: var(--bg); color: var(--text); }
+/* Wide screens show the links inline, so there is nothing to disclose. Kept
+   out of the shared rule above (rather than overriding `display` inside it) so
+   the mobile query only has to switch this one property back on. */
+.navbar-toggle { display: none; }
+/* Same :not(.btn) guard as above, and for the same reason — .active makes
+   this 0,2,1, which outranks .btn-primary even harder. Register is a NavLink,
+   so on /register itself the button would otherwise repaint as a flat
+   primary-bg tint with primary ink: the bug again, on exactly the one route
+   where the user is looking straight at it. */
+.navbar-links a:not(.btn).active { color: var(--primary); background: var(--primary-bg); }
+
+/* ============ Footer ============ */
+/* Footer.jsx existed and referenced .footer, but the class had no rules and
+   MainLayout never rendered the component — so every page simply stopped
+   against the bottom of the 100vh shell. No height or margin-top is needed to
+   pin it down: .page above is `flex: 1` inside the column-flex .app-shell,
+   so it absorbs all leftover space and pushes this to the bottom on short
+   pages without pinning it over content on long ones. */
+.footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: var(--space-5) 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
 
 /* ============ Buttons ============ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid transparent;
-  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
+  font-size: var(--text-base); font-weight: 600; cursor: pointer;
+  /* Enumerated rather than `all`: `all` also animates layout and outline
+     properties, so the focus ring added below would fade in over 150ms
+     instead of appearing the instant it's needed. */
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              box-shadow 0.15s ease, transform 0.15s ease;
   font-family: inherit;
 }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -206,6 +431,19 @@ h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px;
 }
+
+/* Login, Register and VerifyEmail each repeated `maxWidth: 420, margin: '40px
+   auto'` and `fontSize: '1.5rem'` as inline styles — three copies of one
+   decision, none of which could be themed or overridden. Padding goes to
+   --space-6 (32px) rather than inheriting .card's 20px: 20px is right for a
+   dense grid card but cramped around a stack of labelled inputs, and that
+   tightness was the main reason these pages felt unfinished. */
+.auth-card {
+  max-width: 440px;
+  margin: var(--space-7) auto;
+  padding: var(--space-6);
+}
+.auth-card h1 { font-size: var(--h2); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 
@@ -234,10 +472,12 @@ h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
 .field label { font-weight: 600; font-size: 0.9rem; }
 .field .req { color: var(--danger); }
 input, select, textarea {
-  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
-  border-radius: var(--radius-sm); font-size: 0.95rem; font-family: inherit; background: var(--surface); color: var(--text);
+  /* --border-strong, not --border: an input's edge is the only thing marking
+     where the control is, so it needs more definition than a divider does. */
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); font-size: var(--text-base); font-family: inherit; background: var(--surface); color: var(--text);
 }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-bg); }
 textarea { resize: vertical; min-height: 90px; }
 .field-error { color: var(--danger); font-size: 0.82rem; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -280,9 +520,12 @@ textarea.field-invalid {
 /* Password strength */
 .password-strength { display: flex; gap: 4px; height: 4px; margin-top: 2px; }
 .password-strength .str-bar { flex: 1; border-radius: 2px; background: var(--border); transition: background 0.3s; }
-.password-strength .str-bar.active-weak   { background: var(--danger); }
-.password-strength .str-bar.active-medium { background: var(--warning); }
-.password-strength .str-bar.active-strong { background: var(--success); }
+/* The -fill tokens, i.e. the palette's vivid values. These bars are pure
+   graphics with no text on them, so they get the saturated colour that the
+   matching .str-label below cannot use. */
+.password-strength .str-bar.active-weak   { background: var(--danger-fill); }
+.password-strength .str-bar.active-medium { background: var(--warning-fill); }
+.password-strength .str-bar.active-strong { background: var(--success-fill); }
 .str-label { font-size: 0.78rem; margin-top: 2px; }
 .str-label.str-weak   { color: var(--danger); }
 .str-label.str-medium { color: var(--warning); }
@@ -348,6 +591,12 @@ textarea.field-invalid {
 .alert { padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 0.92rem; }
 .alert-error { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
 .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+/* Was used by VerifyEmailPage's dev-mode notice but never defined, so that
+   block rendered as bare padded text with no background, border or colour —
+   the one message on the page that has to be noticed. The --info-* tints
+   already existed for both themes; this just wires them up, matching the two
+   variants above exactly. */
+.alert-info { background: var(--info-bg); color: var(--info); border: 1px solid var(--info-border); }
 
 /* ============ Details page ============ */
 .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -365,8 +614,8 @@ tr:last-child td { border-bottom: none; }
 .table-actions { display: flex; gap: 8px; }
 
 /* ============ Misc ============ */
-.page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-.page-header h1 { font-size: 1.7rem; margin: 0; }
+.page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); }
+.page-header h1 { font-size: var(--h1); margin: 0; }
 .muted { color: var(--text-muted); }
 .back-link { color: var(--primary); font-weight: 600; font-size: 0.9rem; display: inline-block; margin-bottom: 16px; }
 .center-narrow { max-width: 520px; margin: 40px auto; text-align: center; }
@@ -428,12 +677,25 @@ tr:last-child td { border-bottom: none; }
   font-size: 0.88rem;
   min-width: 150px;
 }
+/* Flex, not a fixed four-column grid. The grid was written for
+   ViewApplications' four controls, but AdminDashboard uses this same class
+   with a single status select — which the grid then pinned into a lone 160px
+   cell with three empty columns beside it. Flex adapts to whatever each page
+   actually puts in the bar. */
 .admin-filterbar {
-  display: grid;
-  grid-template-columns: 160px 220px minmax(180px, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: var(--space-4);
 }
+/* Overrides the global `input, select { width: 100% }` — inside a flex row
+   these need to size to their content, not to the row. */
+.admin-filterbar select { flex: 0 0 auto; width: auto; }
+/* The only control that should absorb slack, so the bar fills the row without
+   the selects stretching. min-width: 0 lets it shrink below its intrinsic
+   width instead of forcing an overflow. */
+.admin-filterbar input { flex: 1 1 200px; min-width: 0; }
+.admin-filterbar .btn { flex: 0 0 auto; }
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -455,6 +717,10 @@ tr:last-child td { border-bottom: none; }
   padding: 9px 0;
   border-top: 1px solid var(--border);
 }
+/* Every row carried a top border, including the first — which sat directly
+   under the panel heading and read as a doubled rule. The separator is only
+   wanted BETWEEN rows. */
+.insight-row:first-of-type { border-top: 0; }
 .insight-row span { color: var(--text-muted); }
 .admin-section { margin-bottom: 22px; }
 .section-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
@@ -517,11 +783,48 @@ tr:last-child td { border-bottom: none; }
 }
 
 @media (max-width: 760px) {
-  .admin-filterbar { grid-template-columns: 1fr; }
+  /* Full-width stacked controls: at this width a wrapped flex row leaves
+     ragged part-width selects. */
+  .admin-filterbar { flex-direction: column; align-items: stretch; }
+  .admin-filterbar select { width: 100%; }
   .application-card { flex-direction: column; }
   .application-meta { align-items: flex-start; }
-  .navbar-inner { height: auto; padding-top: 12px; padding-bottom: 12px; align-items: flex-start; }
-  .navbar-links { flex-wrap: wrap; justify-content: flex-end; }
+  /* The navbar keeps its desktop height instead of growing. The rules this
+     replaced set `height: auto` + `align-items: flex-start` and let
+     .navbar-links wrap, which produced a ~110px two-or-three-row pile whose
+     break point moved with the viewport width, and stranded the brand in the
+     top-left with dead space beneath it. Wrapping prevents overflow but isn't
+     a layout — hence the disclosure panel below. */
+  .navbar-toggle { display: inline-flex; }
+
+  .navbar-links {
+    /* Anchored to .navbar (sticky, so it's the containing block) rather than
+       taking part in the bar's own layout — that's what keeps the bar 64px
+       tall whether the menu is open or shut. It also means the panel overlays
+       the page instead of pushing it down, so opening the menu never reflows
+       the content behind it. */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+  }
+  /* display:none while closed is deliberate — visibility/opacity would leave
+     the links in the tab order, so a keyboard user would tab into a menu they
+     can't see. */
+  .navbar-links.is-open { display: flex; }
+  /* Full-width rows: a left-aligned tap target spanning the panel is easier to
+     hit than a centred label, and it makes the list read as a list. */
+  .navbar-links a:not(.btn) { padding: var(--space-3); }
+  .navbar-links .btn { width: 100%; }
+  .navbar-greeting { padding: var(--space-2) var(--space-3); }
   .pagination { flex-direction: column; align-items: stretch; }
   .pagination-controls { justify-content: space-between; }
 }
@@ -565,12 +868,23 @@ tr:last-child td { border-bottom: none; }
    generic class names above (.card, .state, .section-like selectors, etc.)
    and so none of the rules above had to be touched. */
 
+/* The scrollbar guard that used to live here (`overflow-x: hidden`) has moved
+   to .page — see the long comment there. Summary: .landing sits INSIDE the
+   1080px .container, so clipping overflow at this level clipped the hero's
+   full-viewport breakout back to container width. The hero rendered as a
+   floating box whose left edge lined up exactly with the navbar brand, which
+   is the tell. The guard was cancelling the effect it was written to protect;
+   .page is the right level because it already spans the viewport.
+   Do not reintroduce an overflow rule on .landing. */
 .landing {
-  /* The hero below breaks out to full viewport width via negative margins.
-     That trick can leave a hair of extra width when a vertical scrollbar is
-     present (100vw includes it, the visible page doesn't) — clip it here
-     rather than let the page grow a horizontal scrollbar over a few pixels. */
-  overflow-x: hidden;
+  /* Cancels .page's top padding so the hero's full-bleed wash starts flush
+     under the navbar. Without this the padding shows through as a strip of
+     --bg between two differently-coloured full-width bands — a seam that
+     reads as a rendering fault, most obviously in dark mode where all three
+     bands are distinct. Only the landing page wants this; every other page
+     genuinely needs that breathing room under the navbar, which is why it
+     lives here and not on .page. */
+  margin-top: calc(var(--space-6) * -1);
 }
 
 .landing-section {
@@ -610,6 +924,11 @@ tr:last-child td { border-bottom: none; }
 /* ---- Hero ---- */
 .landing-hero {
   background: var(--primary-bg);
+  /* Rebinds --text-muted for this subtree, so the lede, the step captions and
+     the → connectors all pick up the wash-corrected value without each needing
+     its own rule. Points at a token (not a literal) so it still flips with the
+     theme — a hardcoded slate here would be unreadable in dark mode. */
+  --text-muted: var(--text-muted-on-wash);
   /* Full-bleed wash escaping MainLayout's centred .container: the classic
      "negative half-viewport" breakout, safe against the container's own
      centring (unlike a bare 100vw + -50vw, which assumes the container fills
@@ -629,10 +948,19 @@ tr:last-child td { border-bottom: none; }
 }
 .landing-cta-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 48px;
+  margin-bottom: var(--space-7);
+}
+/* Used on all three landing CTAs but never defined, so the hero's primary
+   action rendered at the same size as a table-row button and the hero had no
+   visual anchor. Sized up here rather than by adding a generic .btn-lg: these
+   are the only oversized buttons in the app, and a size variant nothing else
+   uses belongs with the page that needs it. */
+.landing-cta {
+  padding: 13px 26px;
+  font-size: 1.02rem;
 }
 
 /* ---- Signature element: the application track ---- */
@@ -641,20 +969,32 @@ tr:last-child td { border-bottom: none; }
   align-items: flex-start;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
   width: 100%;
+  /* Shared by the chips (as min-height) and the connectors (as height) below,
+     which is what actually keeps the arrows on the chips' centre line. One
+     value used twice beats two guessed offsets that drift apart. */
+  --chip-h: 80px;
 }
 .landing-track-step {
+  /* flex-start, not center: the arrow must line up with the CHIP, and the
+     items it sits between are taller than their chips by a caption of
+     one-or-two lines. Centring against the whole item is what put each arrow
+     at a visibly different height. */
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  gap: var(--space-1);
 }
 .landing-track-connector {
   color: var(--text-muted);
   font-size: 1.2rem;
   font-weight: 700;
-  align-self: center;
-  margin: 0 4px;
+  /* Given the chip's exact height and centred inside it, so the glyph lands on
+     the chip's midline without a hand-tuned margin-top. */
+  height: var(--chip-h);
+  display: flex;
+  align-items: center;
+  margin: 0 var(--space-1);
   flex-shrink: 0;
 }
 .landing-track-item {
@@ -684,9 +1024,19 @@ tr:last-child td { border-bottom: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  /* Centred inside min-height so all three chips are the same height whatever
+     their label wraps to. The Approved/Rejected badges used to live in here,
+     which made the third chip far taller than the other two — they're now a
+     sibling below (see LandingPage.jsx), so every chip holds the same two
+     lines and they match without a fight. */
+  justify-content: center;
+  min-height: var(--chip-h);
+  gap: var(--space-1);
   width: 100%;
-  padding: 14px 12px;
+  padding: 14px var(--space-3);
+  /* Transparent by default so the bordered Apply variant below has an
+     identical inner box to the two tinted ones. */
+  border: 1px solid transparent;
   border-radius: var(--radius);
   font-weight: 600;
 }
@@ -709,7 +1059,18 @@ tr:last-child td { border-bottom: none; }
    already use for these exact statuses (see .badge-primary / .badge-warning
    / .badge-success in the Badges section above) — reused, not reinvented, so
    a visitor sees the app's real status vocabulary before signing up. */
-.landing-track-stage-apply { background: var(--primary-bg); color: var(--primary-dark); }
+/* Except this one, which could not stay on --primary-bg: .landing-hero uses
+   that exact token as its own background, so the chip was painting itself in
+   the colour it sits on and step 1 of the track was simply invisible — in
+   both themes, not just dark. --surface reads as elevated against the hero
+   wash (that's the same figure/ground relationship .card relies on
+   everywhere else), and --primary on --surface measures 7.6:1 light /
+   ~6:1 dark, so the label clears AA either way. */
+.landing-track-stage-apply {
+  background: var(--chip-apply-bg);
+  color: var(--chip-apply-ink);
+  border-color: var(--border);
+}
 .landing-track-stage-review { background: var(--warning-bg); color: var(--warning); }
 .landing-track-stage-decision { background: var(--success-bg); color: var(--success); }
 .landing-track-caption {
@@ -769,6 +1130,10 @@ tr:last-child td { border-bottom: none; }
   }
   .landing-track-connector {
     transform: rotate(90deg);
+    /* The desktop rule gives this the chip's full height so the arrow sits on
+       the chips' midline. Stacked vertically that would reserve 80px of empty
+       column between each step, so hand it back here. */
+    height: auto;
     margin: 2px 0;
   }
 }

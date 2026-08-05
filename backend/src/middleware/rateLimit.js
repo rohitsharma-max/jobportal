@@ -45,4 +45,24 @@ const otpLimiter = rateLimit({
   handler: json('Too many verification attempts. Please try again later.'),
 });
 
-module.exports = { authLimiter, refreshLimiter, otpLimiter };
+// Forgot-password. This gets its own limiter rather than reusing authLimiter,
+// and the reason is not cosmetic: authLimiter sets skipSuccessfulRequests, and
+// /auth/forgot-password answers 200 for EVERY request by design (that
+// uniformity is what stops it being an account-enumeration oracle). Under
+// authLimiter, nothing would ever be counted and the endpoint would be
+// completely unlimited — free bulk address probing and a mail-bomb relay.
+//
+// So: no skipSuccessfulRequests, and a low ceiling. Five is generous for a
+// human who mistyped their address and stingy for a script. The per-account
+// resend cooldown limits mail volume to one address; this limits how many
+// different addresses one source can probe.
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipInTests,
+  handler: json('Too many password reset requests. Please try again in 15 minutes.'),
+});
+
+module.exports = { authLimiter, refreshLimiter, otpLimiter, passwordResetLimiter };

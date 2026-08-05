@@ -110,8 +110,8 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="card" style={{ maxWidth: 420, margin: '40px auto' }}>
-      <h1 style={{ fontSize: '1.5rem' }}>Verify your email</h1>
+    <div className="card auth-card">
+      <h1>Verify your email</h1>
       <p className="muted">
         We sent a 6-digit code to <strong>{email}</strong>. It expires in 10 minutes.
       </p>

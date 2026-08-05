@@ -59,6 +59,21 @@ const userSchema = new mongoose.Schema(
     // Wrong guesses against the current code. Burns the code at OTP_MAX_ATTEMPTS.
     emailOtpAttempts: { type: Number, default: 0, select: false },
 
+    // Password-reset OTP state. A SEPARATE set from emailOtp* above, not a
+    // reuse of it: the two flows can be live at the same time (an unverified
+    // user who has also forgotten their password), and sharing one set would
+    // mean issuing one code silently invalidates the other — which the
+    // recipient would experience as a code from their inbox simply not working.
+    // select:false for the same reason as `password`: these are credentials,
+    // and no handler that returns a user should be able to leak them.
+    // See services/passwordReset.js, which owns this half of the lifecycle.
+    passwordResetOtpHash: { type: String, default: null, select: false },
+    passwordResetOtpExpiresAt: { type: Date, default: null, select: false },
+    // Drives the reset resend cooldown, which is also what stops this endpoint
+    // from being used to mail-bomb an address.
+    passwordResetOtpRequestedAt: { type: Date, default: null, select: false },
+    passwordResetOtpAttempts: { type: Number, default: 0, select: false },
+
     // --- Google identity ---
     //
     // No `default` on purpose. With `default: null` every password-only user
