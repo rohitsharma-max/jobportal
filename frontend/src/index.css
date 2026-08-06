@@ -264,7 +264,9 @@
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -275,8 +277,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: inherit; text-decoration: none; }
-h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text);
+  margin: 0 0 0.5em;
+  line-height: 1.2;
+}
 
 /* ============ Focus ============ */
 /* The stylesheet had no focus styling at all: every button, link and nav item
@@ -294,11 +306,27 @@ h1, h2, h3 { color: var(--text); margin: 0 0 0.5em; line-height: 1.2; }
   outline: 2px solid var(--primary-accent);
   outline-offset: 2px;
 }
-input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
 
 /* ============ Layout ============ */
-.app-shell { display: flex; flex-direction: column; min-height: 100vh; }
-.container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
 /* overflow-x lives HERE, not on .landing, and it is `clip` rather than
    `hidden`. Both details matter:
      - Here, because .page already spans the viewport, so it clips only the
@@ -312,28 +340,69 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
        scrollbar) and can break `position: sticky` on descendants. `clip`
        does neither. The navbar sits outside .page, so its sticky is safe
        regardless, but there's no reason to leave the trap armed. */
-.page { flex: 1; padding: var(--space-6) 0 56px; overflow-x: clip; }
+.page {
+  flex: 1;
+  padding: var(--space-6) 0 56px;
+  overflow-x: clip;
+}
 
 /* ============ Navbar ============ */
 .navbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 20;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
-.navbar-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.navbar-brand { font-weight: 700; font-size: 1.15rem; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Holds the always-visible actions and the (mobile-)collapsible link list.
    Must stay unpositioned: the mobile panel below is absolute against .navbar
    (which is sticky, and therefore the nearest positioned ancestor), so giving
    this a `position` would re-anchor the panel to it and break the drop-down. */
-.navbar-right { display: flex; align-items: center; gap: var(--space-2); }
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* order: -1 puts the theme toggle back to the LEFT of the links on desktop.
    The toggle had to move out of .navbar-links in the markup so it stays
    reachable without opening the mobile menu; this keeps the wide layout
    looking exactly as it did before that move. */
-.navbar-actions { display: flex; align-items: center; gap: var(--space-1); order: -1; }
-.navbar-links { display: flex; gap: var(--space-2); align-items: center; }
-.navbar-greeting { padding: 0 var(--space-2); font-size: 0.9rem; }
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  order: -1;
+}
+
+.navbar-links {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.navbar-greeting {
+  padding: 0 var(--space-2);
+  font-size: 0.9rem;
+}
+
 /* The :not(.btn) guard is load-bearing, not decoration. `.navbar-links a` is
    a class+element selector (specificity 0,1,1); `.btn-primary` and `.btn-sm`
    are single classes (0,1,0). So without the guard THIS rule outranks the
@@ -347,41 +416,76 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
    are buttons. The next person to put a button in the navbar gets working
    styles instead of rediscovering this. */
 .navbar-links a:not(.btn) {
-  padding: var(--space-2) 14px; border-radius: var(--radius-sm); color: var(--text-muted); font-weight: 500; font-size: var(--text-base);
+  padding: var(--space-2) 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: var(--text-base);
 }
-.navbar-links a:not(.btn):hover { background: var(--bg); color: var(--text); }
+
+.navbar-links a:not(.btn):hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
 /* Icon-only, muted by default so it doesn't compete with the adjacent
    Login/Register buttons and nav links — it only needs to be findable. */
 /* Shared by both icon-only navbar buttons. */
 .theme-toggle,
 .navbar-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   /* 40px, up from 34px: 34 was below every touch-target guideline, and these
      are the only controls in the navbar that are icon-only with no text label
      to widen their hit area. */
-  width: 40px; height: 40px; padding: 0; border: none; background: transparent;
-  border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer;
-  font-size: 1rem; line-height: 1; flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
+
 /* Touch and stylus input can't aim as precisely as a mouse, so go to the full
    44px there. Gated on the input device rather than viewport width — a large
    tablet needs this and a small laptop doesn't. */
 @media (pointer: coarse) {
+
   .theme-toggle,
-  .navbar-toggle { width: 44px; height: 44px; }
+  .navbar-toggle {
+    width: 44px;
+    height: 44px;
+  }
 }
+
 .theme-toggle:hover,
-.navbar-toggle:hover { background: var(--bg); color: var(--text); }
+.navbar-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
 /* Wide screens show the links inline, so there is nothing to disclose. Kept
    out of the shared rule above (rather than overriding `display` inside it) so
    the mobile query only has to switch this one property back on. */
-.navbar-toggle { display: none; }
+.navbar-toggle {
+  display: none;
+}
+
 /* Same :not(.btn) guard as above, and for the same reason — .active makes
    this 0,2,1, which outranks .btn-primary even harder. Register is a NavLink,
    so on /register itself the button would otherwise repaint as a flat
    primary-bg tint with primary ink: the bug again, on exactly the one route
    where the user is looking straight at it. */
-.navbar-links a:not(.btn).active { color: var(--primary); background: var(--primary-bg); }
+.navbar-links a:not(.btn).active {
+  color: var(--primary);
+  background: var(--primary-bg);
+}
 
 /* ============ Footer ============ */
 /* Footer.jsx existed and referenced .footer, but the class had no rules and
@@ -401,35 +505,79 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 
 /* ============ Buttons ============ */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid transparent;
-  font-size: var(--text-base); font-weight: 600; cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
   /* Enumerated rather than `all`: `all` also animates layout and outline
      properties, so the focus ring added below would fade in over 150ms
      instead of appearing the instant it's needed. */
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease,
-              box-shadow 0.15s ease, transform 0.15s ease;
+    box-shadow 0.15s ease, transform 0.15s ease;
   font-family: inherit;
 }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* var(--on-accent), not a hardcoded color: these buttons stay filled with a
    saturated accent hue in both themes, but the fill's lightness inverts
    between themes (light-mode fill is dark, dark-mode fill is lifted light —
    see --primary/--danger in the token block), so the ink has to invert too.
    #fff on the dark-mode fill is only 2.98:1 — --on-accent covers both. */
-.btn-primary { background: var(--primary); color: var(--on-accent); }
-.btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
-.btn-outline { background: var(--surface); border-color: var(--border); color: var(--text); }
-.btn-outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
-.btn-danger { background: var(--danger); color: var(--on-accent); }
-.btn-danger:hover:not(:disabled) { background: var(--danger-dark); }
-.btn-sm { padding: 6px 12px; font-size: 0.85rem; }
-.btn-block { width: 100%; }
+.btn-primary {
+  background: var(--primary);
+  color: var(--on-accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-outline {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: var(--on-accent);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-dark);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.btn-block {
+  width: 100%;
+}
 
 /* ============ Cards ============ */
 .card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
 }
 
 /* Login, Register and VerifyEmail each repeated `maxWidth: 420, margin: '40px
@@ -443,55 +591,179 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
   margin: var(--space-7) auto;
   padding: var(--space-6);
 }
-.auth-card h1 { font-size: var(--h2); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.auth-card h1 {
+  font-size: var(--h2);
+}
 
-.opp-card { display: flex; flex-direction: column; gap: 10px; transition: box-shadow 0.15s, transform 0.15s; }
-.opp-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-.opp-card h3 { font-size: 1.1rem; margin: 0; }
-.opp-card .company { color: var(--text-muted); font-size: 0.92rem; font-weight: 500; }
-.opp-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.opp-card-foot { margin-top: auto; padding-top: 12px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.opp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.opp-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.opp-card h3 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.opp-card .company {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.opp-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.opp-card-foot {
+  margin-top: auto;
+  padding-top: 12px;
+}
 
 /* ============ Badges ============ */
 .badge {
-  display: inline-block; padding: 3px 10px; border-radius: 999px;
-  font-size: 0.78rem; font-weight: 600; background: var(--bg); color: var(--text-muted);
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--text-muted);
 }
-.badge-primary { background: var(--primary-bg); color: var(--primary-dark); }
-.badge-type { background: var(--success-bg); color: var(--success); }
+
+.badge-primary {
+  background: var(--primary-bg);
+  color: var(--primary-dark);
+}
+
+.badge-type {
+  background: var(--success-bg);
+  color: var(--success);
+}
 
 /* ============ Toolbar (search + filter) ============ */
-.toolbar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
-.toolbar .search { flex: 1; min-width: 220px; }
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.toolbar .search {
+  flex: 1;
+  min-width: 220px;
+}
 
 /* ============ Forms ============ */
-.form { display: flex; flex-direction: column; gap: 16px; max-width: 640px; }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field label { font-weight: 600; font-size: 0.9rem; }
-.field .req { color: var(--danger); }
-input, select, textarea {
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 640px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.field .req {
+  color: var(--danger);
+}
+
+input,
+select,
+textarea {
   /* --border-strong, not --border: an input's edge is the only thing marking
      where the control is, so it needs more definition than a divider does. */
-  width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm); font-size: var(--text-base); font-family: inherit; background: var(--surface); color: var(--text);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
 }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-accent); box-shadow: 0 0 0 3px var(--primary-bg); }
-textarea { resize: vertical; min-height: 90px; }
-.field-error { color: var(--danger); font-size: 0.82rem; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
 
 /* ============ Validation states ============ */
 /* Visible to screen readers only — carries the word "required" so the red
    asterisk isn't the sole indicator of a required field. */
 .sr-only {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
-.field-footer { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 1.2em; }
-.field-footer .field-error { flex: 1; }
-.field-hint { color: var(--text-muted); font-size: 0.8rem; }
+
+.field-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 1.2em;
+}
+
+.field-footer .field-error {
+  flex: 1;
+}
+
+.field-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
 
 input.field-invalid,
 select.field-invalid,
@@ -500,137 +772,435 @@ textarea.field-invalid {
   box-shadow: 0 0 0 3px var(--danger-bg);
   animation: shake 0.35s ease-in-out;
 }
+
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-5px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(3px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-5px);
+  }
+
+  40% {
+    transform: translateX(5px);
+  }
+
+  60% {
+    transform: translateX(-3px);
+  }
+
+  80% {
+    transform: translateX(3px);
+  }
 }
+
 .field-error {
   animation: fadeSlideIn 0.25s ease-out;
 }
+
 @keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.char-count { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; margin-left: auto; }
-.char-count-over { color: var(--danger); font-weight: 600; }
+
+.char-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.char-count-over {
+  color: var(--danger);
+  font-weight: 600;
+}
 
 /* Password strength */
-.password-strength { display: flex; gap: 4px; height: 4px; margin-top: 2px; }
-.password-strength .str-bar { flex: 1; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+.password-strength {
+  display: flex;
+  gap: 4px;
+  height: 4px;
+  margin-top: 2px;
+}
+
+.password-strength .str-bar {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
 /* The -fill tokens, i.e. the palette's vivid values. These bars are pure
    graphics with no text on them, so they get the saturated colour that the
    matching .str-label below cannot use. */
-.password-strength .str-bar.active-weak   { background: var(--danger-fill); }
-.password-strength .str-bar.active-medium { background: var(--warning-fill); }
-.password-strength .str-bar.active-strong { background: var(--success-fill); }
-.str-label { font-size: 0.78rem; margin-top: 2px; }
-.str-label.str-weak   { color: var(--danger); }
-.str-label.str-medium { color: var(--warning); }
-.str-label.str-strong { color: var(--success); }
+.password-strength .str-bar.active-weak {
+  background: var(--danger-fill);
+}
+
+.password-strength .str-bar.active-medium {
+  background: var(--warning-fill);
+}
+
+.password-strength .str-bar.active-strong {
+  background: var(--success-fill);
+}
+
+.str-label {
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.str-label.str-weak {
+  color: var(--danger);
+}
+
+.str-label.str-medium {
+  color: var(--warning);
+}
+
+.str-label.str-strong {
+  color: var(--success);
+}
 
 /* File info */
-.file-info { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
-.file-info .file-name { font-weight: 600; color: var(--text); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-info .file-size { color: var(--text-muted); }
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.file-info .file-name {
+  font-weight: 600;
+  color: var(--text);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-info .file-size {
+  color: var(--text-muted);
+}
 
 /* ============ Toast notifications ============ */
 .toast-container {
-  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-  display: flex; flex-direction: column-reverse; gap: 10px; max-width: 400px;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  max-width: 400px;
   pointer-events: none;
 }
+
 .toast {
   pointer-events: auto;
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px; border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
-  font-size: 0.9rem; font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 500;
   animation: toastSlideIn 0.35s ease-out;
   backdrop-filter: blur(8px);
 }
-.toast-leave { animation: toastSlideOut 0.3s ease-in forwards; }
-.toast-error   { background: var(--toast-danger-bg);  color: var(--danger);  border: 1px solid var(--danger-border); }
-.toast-success { background: var(--toast-success-bg); color: var(--success); border: 1px solid var(--success-border); }
-.toast-info    { background: var(--toast-info-bg);    color: var(--info);    border: 1px solid var(--info-border); }
+
+.toast-leave {
+  animation: toastSlideOut 0.3s ease-in forwards;
+}
+
+.toast-error {
+  background: var(--toast-danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+
+.toast-success {
+  background: var(--toast-success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.toast-info {
+  background: var(--toast-info-bg);
+  color: var(--info);
+  border: 1px solid var(--info-border);
+}
+
 .toast-icon {
-  display: flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
-.toast-error  .toast-icon { background: var(--danger-bg); }
-.toast-success .toast-icon { background: var(--success-bg); }
-.toast-info   .toast-icon { background: var(--info-bg); }
-.toast-msg { flex: 1; line-height: 1.35; }
+
+.toast-error .toast-icon {
+  background: var(--danger-bg);
+}
+
+.toast-success .toast-icon {
+  background: var(--success-bg);
+}
+
+.toast-info .toast-icon {
+  background: var(--info-bg);
+}
+
+.toast-msg {
+  flex: 1;
+  line-height: 1.35;
+}
+
 .toast-close {
-  background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 2px;
-  opacity: 0.5; transition: opacity 0.15s; color: inherit; line-height: 1;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  color: inherit;
+  line-height: 1;
 }
-.toast-close:hover { opacity: 1; }
+
+.toast-close:hover {
+  opacity: 1;
+}
+
 @keyframes toastSlideIn {
-  from { opacity: 0; transform: translateX(40px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
+
 @keyframes toastSlideOut {
-  from { opacity: 1; transform: translateX(0) scale(1); }
-  to   { opacity: 0; transform: translateX(40px) scale(0.95); }
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(40px) scale(0.95);
+  }
 }
 
 @media (max-width: 560px) {
-  .form-row { grid-template-columns: 1fr; }
-  .toast-container { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: none;
+  }
 }
 
-.state { text-align: center; padding: 56px 20px; color: var(--text-muted); }
-.spinner {
-  width: 38px; height: 38px; border: 4px solid var(--primary-bg); border-top-color: var(--primary);
-  border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 12px;
+.state {
+  text-align: center;
+  padding: 56px 20px;
+  color: var(--text-muted);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.alert { padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 0.92rem; }
-.alert-error { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
-.alert-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+.spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid var(--primary-bg);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 0.92rem;
+}
+
+.alert-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+
+.alert-success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
 /* Was used by VerifyEmailPage's dev-mode notice but never defined, so that
    block rendered as bare padded text with no background, border or colour —
    the one message on the page that has to be noticed. The --info-* tints
    already existed for both themes; this just wires them up, matching the two
    variants above exactly. */
-.alert-info { background: var(--info-bg); color: var(--info); border: 1px solid var(--info-border); }
+.alert-info {
+  background: var(--info-bg);
+  color: var(--info);
+  border: 1px solid var(--info-border);
+}
 
 /* ============ Details page ============ */
-.detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
-.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin: 20px 0; }
-.detail-grid .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
-.detail-grid .value { font-weight: 600; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.detail-grid .label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detail-grid .value {
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
 /* ============ Table ============ */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-th { background: var(--bg); font-weight: 600; color: var(--text-muted); white-space: nowrap; }
-tr:last-child td { border-bottom: none; }
-.table-actions { display: flex; gap: 8px; }
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
 
 /* ============ Misc ============ */
-.page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); }
-.page-header h1 { font-size: var(--h1); margin: 0; }
-.muted { color: var(--text-muted); }
-.back-link { color: var(--primary); font-weight: 600; font-size: 0.9rem; display: inline-block; margin-bottom: 16px; }
-.center-narrow { max-width: 520px; margin: 40px auto; text-align: center; }
-.big-icon { font-size: 3rem; margin-bottom: 8px; }
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.page-header h1 {
+  font-size: var(--h1);
+  margin: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.back-link {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.center-narrow {
+  max-width: 520px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+.big-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
 
 
 
 /* ============ Dashboards ============ */
-.page-subtitle { margin: 4px 0 0; }
+.page-subtitle {
+  margin: 4px 0 0;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
   margin-bottom: 22px;
 }
+
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -638,17 +1208,39 @@ tr:last-child td { border-bottom: none; }
   box-shadow: var(--shadow);
   padding: 16px;
 }
+
 .stat-card span {
   display: block;
   color: var(--text-muted);
   font-size: 0.86rem;
   margin-bottom: 6px;
 }
-.stat-card strong { font-size: 1.8rem; line-height: 1; }
-.badge-success { background: var(--success-bg); color: var(--success); }
-.badge-danger { background: var(--danger-bg); color: var(--danger); }
-.badge-warning { background: var(--warning-bg); color: var(--warning); }
-.application-list { display: grid; gap: 14px; }
+
+.stat-card strong {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.application-list {
+  display: grid;
+  gap: 14px;
+}
+
 .application-card {
   display: flex;
   justify-content: space-between;
@@ -659,7 +1251,12 @@ tr:last-child td { border-bottom: none; }
   box-shadow: var(--shadow);
   padding: 18px;
 }
-.application-card h2 { font-size: 1.12rem; margin-bottom: 4px; }
+
+.application-card h2 {
+  font-size: 1.12rem;
+  margin-bottom: 4px;
+}
+
 .card-kicker {
   color: var(--primary-dark);
   font-size: 0.76rem;
@@ -668,6 +1265,7 @@ tr:last-child td { border-bottom: none; }
   letter-spacing: 0.04em;
   margin-bottom: 6px;
 }
+
 .application-meta {
   display: flex;
   flex-direction: column;
@@ -677,6 +1275,7 @@ tr:last-child td { border-bottom: none; }
   font-size: 0.88rem;
   min-width: 150px;
 }
+
 /* Flex, not a fixed four-column grid. The grid was written for
    ViewApplications' four controls, but AdminDashboard uses this same class
    with a single status select — which the grid then pinned into a lone 160px
@@ -688,20 +1287,33 @@ tr:last-child td { border-bottom: none; }
   gap: 10px;
   margin-bottom: var(--space-4);
 }
+
 /* Overrides the global `input, select { width: 100% }` — inside a flex row
    these need to size to their content, not to the row. */
-.admin-filterbar select { flex: 0 0 auto; width: auto; }
+.admin-filterbar select {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 /* The only control that should absorb slack, so the bar fills the row without
    the selects stretching. min-width: 0 lets it shrink below its intrinsic
    width instead of forcing an overflow. */
-.admin-filterbar input { flex: 1 1 200px; min-width: 0; }
-.admin-filterbar .btn { flex: 0 0 auto; }
+.admin-filterbar input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.admin-filterbar .btn {
+  flex: 0 0 auto;
+}
+
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
   margin-bottom: 22px;
 }
+
 .insight-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -709,7 +1321,12 @@ tr:last-child td { border-bottom: none; }
   box-shadow: var(--shadow);
   padding: 18px;
 }
-.insight-panel h2 { font-size: 1rem; margin-bottom: 12px; }
+
+.insight-panel h2 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
 .insight-row {
   display: flex;
   justify-content: space-between;
@@ -717,13 +1334,29 @@ tr:last-child td { border-bottom: none; }
   padding: 9px 0;
   border-top: 1px solid var(--border);
 }
+
 /* Every row carried a top border, including the first — which sat directly
    under the panel heading and read as a doubled rule. The separator is only
    wanted BETWEEN rows. */
-.insight-row:first-of-type { border-top: 0; }
-.insight-row span { color: var(--text-muted); }
-.admin-section { margin-bottom: 22px; }
-.section-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.insight-row:first-of-type {
+  border-top: 0;
+}
+
+.insight-row span {
+  color: var(--text-muted);
+}
+
+.admin-section {
+  margin-bottom: 22px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
 .link-button {
   border: 0;
   background: transparent;
@@ -733,6 +1366,7 @@ tr:last-child td { border-bottom: none; }
   font-weight: 700;
   padding: 0;
 }
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -746,6 +1380,7 @@ tr:last-child td { border-bottom: none; }
   justify-content: center;
   padding: 22px;
 }
+
 .resume-modal {
   width: min(980px, 100%);
   height: min(760px, 92vh);
@@ -756,6 +1391,7 @@ tr:last-child td { border-bottom: none; }
   flex-direction: column;
   overflow: hidden;
 }
+
 .modal-head,
 .modal-foot {
   display: flex;
@@ -765,37 +1401,90 @@ tr:last-child td { border-bottom: none; }
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
 }
-.modal-foot { border-top: 1px solid var(--border); border-bottom: 0; }
-.modal-head h2 { font-size: 1.05rem; margin: 0; }
-.resume-modal iframe { width: 100%; flex: 1; border: 0; background: var(--bg); }
+
+.modal-foot {
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.modal-head h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.resume-modal iframe {
+  width: 100%;
+  flex: 1;
+  border: 0;
+  background: var(--bg);
+}
 
 /* ============ Pagination ============ */
 .pagination {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap; margin-top: 24px;
-  padding-top: 16px; border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
-.pagination-status { color: var(--text-muted); font-size: 0.88rem; }
-.pagination-controls { display: flex; align-items: center; gap: 10px; }
+
+.pagination-status {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .pagination-page {
-  color: var(--text-muted); font-size: 0.88rem; font-weight: 500;
-  min-width: 100px; text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  min-width: 100px;
+  text-align: center;
 }
 
 @media (max-width: 760px) {
+
   /* Full-width stacked controls: at this width a wrapped flex row leaves
      ragged part-width selects. */
-  .admin-filterbar { flex-direction: column; align-items: stretch; }
-  .admin-filterbar select { width: 100%; }
-  .application-card { flex-direction: column; }
-  .application-meta { align-items: flex-start; }
+  .admin-filterbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-filterbar select {
+    width: 100%;
+  }
+
+  .application-card {
+    flex-direction: column;
+  }
+
+  .application-meta {
+    align-items: flex-start;
+  }
+
   /* The navbar keeps its desktop height instead of growing. The rules this
      replaced set `height: auto` + `align-items: flex-start` and let
      .navbar-links wrap, which produced a ~110px two-or-three-row pile whose
      break point moved with the viewport width, and stranded the brand in the
      top-left with dead space beneath it. Wrapping prevents overflow but isn't
      a layout — hence the disclosure panel below. */
-  .navbar-toggle { display: inline-flex; }
+  .navbar-toggle {
+    display: inline-flex;
+  }
+
+  .admin-filterbar input {
+    flex: 1 1;
+    min-width: 0;
+  }
 
   .navbar-links {
     /* Anchored to .navbar (sticky, so it's the containing block) rather than
@@ -816,17 +1505,36 @@ tr:last-child td { border-bottom: none; }
     border-bottom: 1px solid var(--border);
     box-shadow: var(--shadow-md);
   }
+
   /* display:none while closed is deliberate — visibility/opacity would leave
      the links in the tab order, so a keyboard user would tab into a menu they
      can't see. */
-  .navbar-links.is-open { display: flex; }
+  .navbar-links.is-open {
+    display: flex;
+  }
+
   /* Full-width rows: a left-aligned tap target spanning the panel is easier to
      hit than a centred label, and it makes the list read as a list. */
-  .navbar-links a:not(.btn) { padding: var(--space-3); }
-  .navbar-links .btn { width: 100%; }
-  .navbar-greeting { padding: var(--space-2) var(--space-3); }
-  .pagination { flex-direction: column; align-items: stretch; }
-  .pagination-controls { justify-content: space-between; }
+  .navbar-links a:not(.btn) {
+    padding: var(--space-3);
+  }
+
+  .navbar-links .btn {
+    width: 100%;
+  }
+
+  .navbar-greeting {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination-controls {
+    justify-content: space-between;
+  }
 }
 
 /* "or" separator between the credential form and the Google button. */
@@ -841,6 +1549,7 @@ tr:last-child td { border-bottom: none; }
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+
 .divider-or::before,
 .divider-or::after {
   content: '';
@@ -848,6 +1557,7 @@ tr:last-child td { border-bottom: none; }
   height: 1px;
   background: var(--border);
 }
+
 .btn-link {
   background: none;
   border: none;
@@ -857,6 +1567,7 @@ tr:last-child td { border-bottom: none; }
   text-decoration: underline;
   font: inherit;
 }
+
 .btn-link:disabled {
   color: var(--text-muted);
   cursor: default;
@@ -901,6 +1612,7 @@ tr:last-child td { border-bottom: none; }
   letter-spacing: 0.14em;
   color: var(--primary);
 }
+
 .landing-h1 {
   margin: 0 0 16px;
   font-size: clamp(2.25rem, 5.5vw, 4rem);
@@ -908,12 +1620,14 @@ tr:last-child td { border-bottom: none; }
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
+
 .landing-h2 {
   margin: 0 0 24px;
   font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
+
 .landing-lede {
   margin: 0 0 28px;
   font-size: 1.125rem;
@@ -939,6 +1653,7 @@ tr:last-child td { border-bottom: none; }
   padding: 64px 20px 56px;
   text-align: center;
 }
+
 .landing-hero-inner {
   max-width: 720px;
   margin: 0 auto;
@@ -946,6 +1661,7 @@ tr:last-child td { border-bottom: none; }
   flex-direction: column;
   align-items: center;
 }
+
 .landing-cta-row {
   display: flex;
   gap: var(--space-3);
@@ -953,6 +1669,7 @@ tr:last-child td { border-bottom: none; }
   justify-content: center;
   margin-bottom: var(--space-7);
 }
+
 /* Used on all three landing CTAs but never defined, so the hero's primary
    action rendered at the same size as a table-row button and the hero had no
    visual anchor. Sized up here rather than by adding a generic .btn-lg: these
@@ -976,6 +1693,7 @@ tr:last-child td { border-bottom: none; }
      value used twice beats two guessed offsets that drift apart. */
   --chip-h: 80px;
 }
+
 .landing-track-step {
   /* flex-start, not center: the arrow must line up with the CHIP, and the
      items it sits between are taller than their chips by a caption of
@@ -985,6 +1703,7 @@ tr:last-child td { border-bottom: none; }
   align-items: flex-start;
   gap: var(--space-1);
 }
+
 .landing-track-connector {
   color: var(--text-muted);
   font-size: 1.2rem;
@@ -997,6 +1716,7 @@ tr:last-child td { border-bottom: none; }
   margin: 0 var(--space-1);
   flex-shrink: 0;
 }
+
 .landing-track-item {
   display: flex;
   flex-direction: column;
@@ -1010,16 +1730,26 @@ tr:last-child td { border-bottom: none; }
      depends on an animation actually completing. */
   opacity: 1;
 }
+
 @media (prefers-reduced-motion: no-preference) {
   .landing-track-item {
     opacity: 0;
     animation: landing-rise 0.4s ease-out forwards;
   }
 }
+
 @keyframes landing-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .landing-track-stage {
   display: flex;
   flex-direction: column;
@@ -1040,14 +1770,17 @@ tr:last-child td { border-bottom: none; }
   border-radius: var(--radius);
   font-weight: 600;
 }
+
 .landing-track-num {
   font-size: 0.72rem;
   font-weight: 700;
   opacity: 0.7;
 }
+
 .landing-track-label {
   font-size: 0.95rem;
 }
+
 .landing-track-outcomes {
   display: flex;
   gap: 6px;
@@ -1055,6 +1788,7 @@ tr:last-child td { border-bottom: none; }
   flex-wrap: wrap;
   justify-content: center;
 }
+
 /* Same tints the admin approve/reject screen and the applicant dashboard
    already use for these exact statuses (see .badge-primary / .badge-warning
    / .badge-success in the Badges section above) — reused, not reinvented, so
@@ -1071,8 +1805,17 @@ tr:last-child td { border-bottom: none; }
   color: var(--chip-apply-ink);
   border-color: var(--border);
 }
-.landing-track-stage-review { background: var(--warning-bg); color: var(--warning); }
-.landing-track-stage-decision { background: var(--success-bg); color: var(--success); }
+
+.landing-track-stage-review {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.landing-track-stage-decision {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
 .landing-track-caption {
   margin: 0;
   font-size: 0.82rem;
@@ -1084,6 +1827,7 @@ tr:last-child td { border-bottom: none; }
 .landing-domains {
   text-align: center;
 }
+
 .landing-chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -1095,16 +1839,19 @@ tr:last-child td { border-bottom: none; }
 .landing-cards {
   text-align: center;
 }
+
 .landing-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
   text-align: left;
 }
+
 .landing-do-card h3 {
   font-size: 1.05rem;
   margin-bottom: 8px;
 }
+
 .landing-do-card p {
   margin: 0;
 }
@@ -1113,6 +1860,7 @@ tr:last-child td { border-bottom: none; }
 .landing-closing {
   text-align: center;
 }
+
 .landing-closing-lede {
   margin-left: auto;
   margin-right: auto;
@@ -1123,11 +1871,14 @@ tr:last-child td { border-bottom: none; }
     flex-direction: column;
     align-items: center;
   }
+
   .landing-track-step {
     flex-direction: column;
     width: 100%;
     max-width: 240px;
+    align-items:center;
   }
+
   .landing-track-connector {
     transform: rotate(90deg);
     /* The desktop rule gives this the chip's full height so the arrow sits on
