@@ -141,14 +141,16 @@ export default function GoogleSignInButton({ onSignedIn }) {
         // Clear first: StrictMode's second mount would otherwise stack a second
         // iframe button inside the same container.
         containerRef.current.innerHTML = '';
+
+        const buttonWidth = Math.min(
+          containerRef.current.offsetWidth,
+          376
+        );
+
         window.google.accounts.id.renderButton(containerRef.current, {
           theme: 'outline',
           size: 'large',
-          // 376, not 320: this is .auth-card's inner width (440 minus 2 ×
-          // --space-6 padding), so the Google button lines up with the form
-          // inputs above it instead of sitting visibly narrower than them.
-          // Google caps this at 400, so don't raise it much further.
-          width: 376,
+          width: buttonWidth,
           text: 'continue_with',
           logo_alignment: 'center',
         });
@@ -180,7 +182,8 @@ export default function GoogleSignInButton({ onSignedIn }) {
         <div
           ref={containerRef}
           aria-busy={busy || undefined}
-          style={{ display: 'flex', justifyContent: 'center', minHeight: 44 }}
+          style={{ display: 'flex', justifyContent: 'center', minHeight: 44, width: '100%'
+           }}
         />
       )}
       {busy && <p className="muted" style={{ textAlign: 'center' }}>Signing you in…</p>}
